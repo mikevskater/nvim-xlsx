@@ -6,6 +6,7 @@ local xml = require("xlsx.xml.writer")
 local templates = require("xlsx.xml.templates")
 local zip = require("xlsx.zip")
 local doc_props = require("xlsx.parts.doc_props")
+local Style = require("xlsx.style")
 
 local M = {}
 
@@ -14,6 +15,7 @@ local M = {}
 ---@field sheet_map table<string, Worksheet> Map of sheet names to worksheets
 ---@field properties table Document properties
 ---@field active_sheet integer Index of active sheet
+---@field styles StyleRegistry Style registry for this workbook
 local Workbook = {}
 Workbook.__index = Workbook
 
@@ -29,6 +31,7 @@ function M.new()
     modified = os.date("!%Y-%m-%dT%H:%M:%SZ"),
   }
   self.active_sheet = 1
+  self.styles = Style.new_registry()
   return self
 end
 
@@ -104,6 +107,13 @@ function Workbook:set_properties(props)
   end
   -- Update modified timestamp
   self.properties.modified = os.date("!%Y-%m-%dT%H:%M:%SZ")
+end
+
+--- Create a style and return its index
+--- @param def table Style definition
+--- @return integer Style index
+function Workbook:create_style(def)
+  return self.styles:create_style(def)
 end
 
 --- Generate [Content_Types].xml
@@ -239,36 +249,10 @@ function Workbook:_generate_workbook_xml()
   return b:to_string()
 end
 
---- Generate xl/styles.xml (minimal required structure)
+--- Generate xl/styles.xml
 --- @return string
 function Workbook:_generate_styles_xml()
-  local b = xml.builder()
-  b:declaration()
-  b:open("styleSheet", { xmlns = templates.NS.SPREADSHEET })
-
-  -- Fonts - at least one required
-  b:raw('<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>')
-
-  -- Fills - must have at least 2: none and gray125
-  b:raw('<fills count="2">')
-  b:raw('<fill><patternFill patternType="none"/></fill>')
-  b:raw('<fill><patternFill patternType="gray125"/></fill>')
-  b:raw('</fills>')
-
-  -- Borders - at least one empty required
-  b:raw('<borders count="1"><border/></borders>')
-
-  -- Cell style formats
-  b:raw('<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>')
-
-  -- Cell formats
-  b:raw('<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>')
-
-  -- Cell styles
-  b:raw('<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>')
-
-  b:close("styleSheet")
-  return b:to_string()
+  return self.styles:to_xml()
 end
 
 --- Save workbook to file

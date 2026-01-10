@@ -162,6 +162,55 @@ function Worksheet:set_row_height(row, height)
   self.row_heights[row] = height
 end
 
+--- Set style for a cell
+--- @param row integer Row number
+--- @param col integer Column number
+--- @param style_index integer Style index from workbook:create_style()
+function Worksheet:set_cell_style(row, col, style_index)
+  local cell = self:get_cell(row, col)
+  if cell then
+    cell.style_index = style_index
+  else
+    -- Create empty cell with style
+    local Cell = require("xlsx.cell")
+    if not self.rows[row] then
+      self.rows[row] = {}
+    end
+    cell = Cell.new(row, col, nil)
+    cell.style_index = style_index
+    self.rows[row][col] = cell
+    self:_update_dimensions(row, col)
+  end
+end
+
+--- Set style for a range of cells
+--- @param r1 integer Start row
+--- @param c1 integer Start column
+--- @param r2 integer End row
+--- @param c2 integer End column
+--- @param style_index integer Style index from workbook:create_style()
+function Worksheet:set_range_style(r1, c1, r2, c2, style_index)
+  for row = r1, r2 do
+    for col = c1, c2 do
+      self:set_cell_style(row, col, style_index)
+    end
+  end
+end
+
+--- Set cell value with optional style
+--- @param row integer Row number
+--- @param col integer Column number
+--- @param value any Cell value
+--- @param style_index? integer Optional style index
+--- @return Cell
+function Worksheet:set_cell_value(row, col, value, style_index)
+  local cell = self:set_cell(row, col, value)
+  if style_index then
+    cell.style_index = style_index
+  end
+  return cell
+end
+
 --- Get the dimension string (e.g., "A1:C10")
 --- @return string
 function Worksheet:get_dimension()

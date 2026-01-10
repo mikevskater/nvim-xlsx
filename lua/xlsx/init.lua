@@ -5,7 +5,7 @@ local Workbook = require("xlsx.workbook")
 
 local M = {}
 
-M._VERSION = "0.1.0"
+M._VERSION = "0.2.0"
 
 --- Create a new empty workbook
 --- @return Workbook
@@ -52,8 +52,16 @@ end
 M.Workbook = Workbook.Workbook
 M.Worksheet = require("xlsx.worksheet").Worksheet
 M.Cell = require("xlsx.cell").Cell
+M.Style = require("xlsx.style")
 M.xml = require("xlsx.xml")
 M.utils = require("xlsx.utils")
 M.zip = require("xlsx.zip")
+
+-- Style constants for convenience
+M.BORDER_STYLES = M.Style.BORDER_STYLES
+M.HALIGN = M.Style.HALIGN
+M.VALIGN = M.Style.VALIGN
+M.UNDERLINE = M.Style.UNDERLINE
+M.BUILTIN_FORMATS = M.Style.BUILTIN_FORMATS
 
 return M

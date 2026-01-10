@@ -76,10 +76,10 @@ function Cell:get_ref()
   return column_utils.make_ref(self.row, self.col)
 end
 
---- Check if cell has any content
+--- Check if cell has any content (value, formula, or style)
 --- @return boolean
 function Cell:has_content()
-  return self.value ~= nil or self.formula ~= nil
+  return self.value ~= nil or self.formula ~= nil or (self.style_index and self.style_index > 0)
 end
 
 --- Generate XML for this cell
@@ -87,6 +87,12 @@ end
 function Cell:to_xml()
   if not self:has_content() then
     return ""
+  end
+
+  -- Handle styled empty cells
+  if self.value == nil and self.formula == nil then
+    local ref = self:get_ref()
+    return xml.empty_element("c", { r = ref, s = self.style_index })
   end
 
   local ref = self:get_ref()
