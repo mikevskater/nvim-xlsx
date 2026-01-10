@@ -197,6 +197,83 @@ function Worksheet:set_range_style(r1, c1, r2, c2, style_index)
   end
 end
 
+--- Check if a range overlaps with any existing merged cell range
+--- @param r1 integer Start row
+--- @param c1 integer Start column
+--- @param r2 integer End row
+--- @param c2 integer End column
+--- @return boolean overlaps
+--- @return string? conflicting_range
+local function check_merge_overlap(merged_cells, r1, c1, r2, c2)
+  for _, merge_ref in ipairs(merged_cells) do
+    local range = column_utils.parse_range(merge_ref)
+    local mr1, mc1 = range.start.row, range.start.col
+    local mr2, mc2 = range.finish.row, range.finish.col
+
+    -- Check if ranges overlap
+    local overlap = not (r2 < mr1 or r1 > mr2 or c2 < mc1 or c1 > mc2)
+    if overlap then
+      return true, merge_ref
+    end
+  end
+  return false
+end
+
+--- Merge cells in a range
+--- The value of the top-left cell will be displayed across the merged area
+--- @param r1 integer Start row
+--- @param c1 integer Start column
+--- @param r2 integer End row
+--- @param c2 integer End column
+--- @return boolean success
+--- @return string? error_message
+function Worksheet:merge_cells(r1, c1, r2, c2)
+  -- Validate bounds
+  if r1 < 1 or r1 > 1048576 or r2 < 1 or r2 > 1048576 then
+    return false, "Row out of range (1-1048576)"
+  end
+  if c1 < 1 or c1 > 16384 or c2 < 1 or c2 > 16384 then
+    return false, "Column out of range (1-16384)"
+  end
+
+  -- Normalize coordinates (ensure r1 <= r2, c1 <= c2)
+  if r1 > r2 then r1, r2 = r2, r1 end
+  if c1 > c2 then c1, c2 = c2, c1 end
+
+  -- Check for single cell (no merge needed)
+  if r1 == r2 and c1 == c2 then
+    return false, "Cannot merge a single cell"
+  end
+
+  -- Check for overlaps with existing merges
+  local overlaps, conflict = check_merge_overlap(self.merged_cells, r1, c1, r2, c2)
+  if overlaps then
+    return false, "Range overlaps with existing merge: " .. conflict
+  end
+
+  -- Add the merge reference
+  local merge_ref = column_utils.make_range(r1, c1, r2, c2)
+  table.insert(self.merged_cells, merge_ref)
+
+  -- Update dimensions to include the merged range
+  self:_update_dimensions(r1, c1)
+  self:_update_dimensions(r2, c2)
+
+  return true
+end
+
+--- Merge cells using A1:B2 notation
+--- @param range string Range reference (e.g., "A1:D5")
+--- @return boolean success
+--- @return string? error_message
+function Worksheet:merge_range(range)
+  local parsed = column_utils.parse_range(range)
+  return self:merge_cells(
+    parsed.start.row, parsed.start.col,
+    parsed.finish.row, parsed.finish.col
+  )
+end
+
 --- Set cell value with optional style
 --- @param row integer Row number
 --- @param col integer Column number
@@ -209,6 +286,48 @@ function Worksheet:set_cell_value(row, col, value, style_index)
     cell.style_index = style_index
   end
   return cell
+end
+
+--- Set a formula in a cell
+--- @param row integer Row number
+--- @param col integer Column number
+--- @param formula string Formula string (with or without leading =)
+--- @param style_index? integer Optional style index
+--- @return Cell
+function Worksheet:set_formula(row, col, formula, style_index)
+  -- Ensure formula starts with = for consistency
+  if formula:sub(1, 1) ~= "=" then
+    formula = "=" .. formula
+  end
+  return self:set_cell_value(row, col, formula, style_index)
+end
+
+--- Set a date value in a cell (as Excel serial number)
+--- @param row integer Row number
+--- @param col integer Column number
+--- @param date_value number|table Excel serial number, or date table {year, month, day, hour?, min?, sec?}
+--- @param style_index? integer Optional style index (recommend using a date number format)
+--- @return Cell
+function Worksheet:set_date(row, col, date_value, style_index)
+  local serial
+  if type(date_value) == "table" then
+    local date_utils = require("xlsx.utils.date")
+    serial = date_utils.to_serial(date_value)
+  else
+    serial = date_value
+  end
+  return self:set_cell_value(row, col, serial, style_index)
+end
+
+--- Set a boolean value in a cell
+--- @param row integer Row number
+--- @param col integer Column number
+--- @param value boolean Boolean value
+--- @param style_index? integer Optional style index
+--- @return Cell
+function Worksheet:set_boolean(row, col, value, style_index)
+  -- The cell module handles boolean detection automatically
+  return self:set_cell_value(row, col, value, style_index)
 end
 
 --- Get the dimension string (e.g., "A1:C10")

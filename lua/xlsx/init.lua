@@ -5,7 +5,7 @@ local Workbook = require("xlsx.workbook")
 
 local M = {}
 
-M._VERSION = "0.2.0"
+M._VERSION = "0.3.0"
 
 --- Create a new empty workbook
 --- @return Workbook
@@ -63,5 +63,8 @@ M.HALIGN = M.Style.HALIGN
 M.VALIGN = M.Style.VALIGN
 M.UNDERLINE = M.Style.UNDERLINE
 M.BUILTIN_FORMATS = M.Style.BUILTIN_FORMATS
+
+-- Date utilities for convenience
+M.date = require("xlsx.utils.date")
 
 return M
