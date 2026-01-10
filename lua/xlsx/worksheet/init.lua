@@ -4,6 +4,56 @@
 --- This module provides backward compatibility by exposing the same API
 --- as the original worksheet.lua while internally splitting the code
 --- into smaller, focused modules.
+---
+--- ## Error Handling Patterns
+---
+--- The Worksheet API uses two error handling patterns:
+---
+--- ### 1. Throws error() - For programmer errors
+--- These methods throw errors for invalid arguments or out-of-range values.
+--- Use pcall() if you need to catch these errors.
+---
+--- Methods that throw:
+---   - set_cell(), set(), set_cell_value(), set_formula(), set_date(), set_boolean()
+---   - freeze_panes(), freeze_rows(), freeze_cols()
+---   - set_auto_filter(), set_auto_filter_range()
+---   - add_data_validation(), add_dropdown(), add_number_validation()
+---   - set_orientation()
+---
+--- ### 2. Returns nil/false, error - For recoverable errors
+--- These methods return error information that the caller can handle gracefully.
+---
+--- Methods that return errors:
+---   - M.new(name, index, workbook) -> Worksheet?, error_message?
+---   - merge_cells(r1, c1, r2, c2) -> boolean, error_message?
+---   - merge_range(range) -> boolean, error_message?
+---
+--- ### 3. Returns nil - For lookups (not an error)
+--- These methods return nil when no data is found, which is expected behavior.
+---
+---   - get_cell(row, col) -> Cell?
+---   - get(ref) -> Cell?
+---
+--- ## Method Chaining
+---
+--- Feature methods support chaining by returning self:
+---   sheet:freeze_rows(1):set_auto_filter(1, 1, 10, 5):set_orientation("landscape")
+---
+--- Cell methods return the Cell object instead (for further cell manipulation):
+---   local cell = sheet:set_cell(1, 1, "Hello")
+---   cell.style_index = my_style
+---
+--- Chainable methods (return Worksheet):
+---   - freeze_panes(), freeze_rows(), freeze_cols()
+---   - set_auto_filter(), set_auto_filter_range()
+---   - add_data_validation(), add_dropdown(), add_number_validation()
+---   - add_hyperlink()
+---   - set_print_settings(), set_margins(), set_orientation()
+---   - set_print_area(), set_print_title_rows(), set_print_title_cols()
+---
+--- Cell methods (return Cell):
+---   - set_cell(), set(), set_cell_value(), set_formula(), set_date(), set_boolean()
+---
 
 local core = require("xlsx.worksheet.core")
 local features = require("xlsx.worksheet.features")
