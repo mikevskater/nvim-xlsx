@@ -6,7 +6,7 @@ local reader = require("xlsx.reader")
 
 local M = {}
 
-M._VERSION = "0.5.0"
+M._VERSION = "0.6.0"
 
 --- Create a new empty workbook
 --- @return Workbook
@@ -131,6 +131,152 @@ function M.import_table(filepath, options)
   return data
 end
 
+--- Get information about an xlsx file without fully loading it
+--- @param filepath string Path to the xlsx file
+--- @return table? info File info, or nil on error
+--- @return string? error Error message if failed
+function M.info(filepath)
+  local wb, err = M.open(filepath)
+  if not wb then
+    return nil, err
+  end
+
+  local sheets = M.get_sheet_names(wb)
+  local sheet_info = {}
+
+  for i, name in ipairs(sheets) do
+    local sheet = M.get_sheet_by_index(wb, i)
+    local dim = sheet and sheet.dimension or "A1"
+    table.insert(sheet_info, {
+      index = i,
+      name = name,
+      dimension = dim,
+    })
+  end
+
+  return {
+    sheets = sheet_info,
+    sheet_count = #sheets,
+    properties = wb.properties or {},
+  }
+end
+
+--- Create xlsx from a CSV string
+--- @param csv_string string CSV content
+--- @param filepath string Output xlsx path
+--- @param options? table Options: { delimiter?: string, has_headers?: boolean, sheet_name?: string }
+--- @return boolean success
+--- @return string? error_message
+function M.from_csv(csv_string, filepath, options)
+  options = options or {}
+  local delimiter = options.delimiter or ","
+
+  local data = {}
+  local headers = nil
+
+  -- Simple CSV parsing (handles basic cases)
+  for line in csv_string:gmatch("[^\r\n]+") do
+    local row = {}
+    -- Handle quoted fields
+    local pos = 1
+    while pos <= #line do
+      local c = line:sub(pos, pos)
+      if c == '"' then
+        -- Quoted field
+        local end_quote = line:find('"', pos + 1)
+        while end_quote and line:sub(end_quote + 1, end_quote + 1) == '"' do
+          -- Escaped quote
+          end_quote = line:find('"', end_quote + 2)
+        end
+        if end_quote then
+          local value = line:sub(pos + 1, end_quote - 1):gsub('""', '"')
+          table.insert(row, value)
+          pos = end_quote + 2  -- Skip closing quote and delimiter
+        else
+          -- Malformed, take rest of line
+          table.insert(row, line:sub(pos + 1))
+          break
+        end
+      else
+        -- Unquoted field
+        local next_delim = line:find(delimiter, pos, true)
+        if next_delim then
+          local value = line:sub(pos, next_delim - 1)
+          -- Try to convert to number
+          local num = tonumber(value)
+          table.insert(row, num or value)
+          pos = next_delim + 1
+        else
+          local value = line:sub(pos)
+          local num = tonumber(value)
+          table.insert(row, num or value)
+          break
+        end
+      end
+    end
+
+    if options.has_headers and not headers then
+      headers = row
+    else
+      table.insert(data, row)
+    end
+  end
+
+  return M.export_table(data, filepath, {
+    sheet_name = options.sheet_name or "Sheet1",
+    headers = headers,
+  })
+end
+
+--- Create xlsx from a CSV file
+--- @param csv_path string Path to CSV file
+--- @param xlsx_path string Output xlsx path
+--- @param options? table Options: { delimiter?: string, has_headers?: boolean, sheet_name?: string }
+--- @return boolean success
+--- @return string? error_message
+function M.from_csv_file(csv_path, xlsx_path, options)
+  local file, err = io.open(csv_path, "r")
+  if not file then
+    return false, "Cannot open CSV file: " .. tostring(err)
+  end
+
+  local content = file:read("*a")
+  file:close()
+
+  return M.from_csv(content, xlsx_path, options)
+end
+
+--- Export xlsx to CSV string
+--- @param filepath string Path to xlsx file
+--- @param options? table Options: { sheet_name?: string, sheet_index?: integer, delimiter?: string }
+--- @return string? csv CSV content, or nil on error
+--- @return string? error Error message if failed
+function M.to_csv(filepath, options)
+  options = options or {}
+  local delimiter = options.delimiter or ","
+
+  local data, err = M.import_table(filepath, options)
+  if not data then
+    return nil, err
+  end
+
+  local lines = {}
+  for _, row in ipairs(data) do
+    local cells = {}
+    for _, value in ipairs(row) do
+      local str = tostring(value or "")
+      -- Quote if contains delimiter, quote, or newline
+      if str:find(delimiter, 1, true) or str:find('"') or str:find("\n") then
+        str = '"' .. str:gsub('"', '""') .. '"'
+      end
+      table.insert(cells, str)
+    end
+    table.insert(lines, table.concat(cells, delimiter))
+  end
+
+  return table.concat(lines, "\n")
+end
+
 --- Export submodules for advanced usage
 M.Workbook = Workbook.Workbook
 M.Worksheet = require("xlsx.worksheet").Worksheet
@@ -150,5 +296,11 @@ M.BUILTIN_FORMATS = M.Style.BUILTIN_FORMATS
 
 -- Date utilities for convenience
 M.date = require("xlsx.utils.date")
+
+-- Validation utilities for convenience
+M.validation = require("xlsx.utils.validation")
+
+-- Excel limits for reference
+M.LIMITS = M.validation.LIMITS
 
 return M
