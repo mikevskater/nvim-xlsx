@@ -120,13 +120,26 @@ local function zip_windows(source_dir, output_path)
     vim.fn.delete(output_path)
   end
 
+  -- PowerShell's Compress-Archive only accepts .zip extension
+  -- Create as .zip then rename if needed
+  local temp_zip = output_path
+  local needs_rename = false
+  if not output_path:lower():match("%.zip$") then
+    temp_zip = output_path .. ".zip"
+    needs_rename = true
+    -- Delete temp zip if it exists
+    if vim.fn.filereadable(temp_zip) == 1 then
+      vim.fn.delete(temp_zip)
+    end
+  end
+
   -- PowerShell command to create ZIP
   -- We need to add all contents from source_dir into the zip
   local ps_script = string.format(
     [[$ErrorActionPreference = 'Stop'; ]] ..
     [[Compress-Archive -Path '%s\*' -DestinationPath '%s' -CompressionLevel Optimal]],
     source_dir:gsub("'", "''"),
-    output_path:gsub("'", "''")
+    temp_zip:gsub("'", "''")
   )
 
   local success, output = spawn_sync("powershell", {
@@ -138,6 +151,15 @@ local function zip_windows(source_dir, output_path)
 
   if not success then
     return false, "Failed to create ZIP: " .. output
+  end
+
+  -- Rename to final output path if needed
+  if needs_rename then
+    local rename_ok = vim.fn.rename(temp_zip, output_path)
+    if rename_ok ~= 0 then
+      vim.fn.delete(temp_zip)
+      return false, "Failed to rename zip to " .. output_path
+    end
   end
 
   return true
