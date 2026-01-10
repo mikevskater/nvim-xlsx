@@ -5,6 +5,7 @@ local Worksheet = require("xlsx.worksheet")
 local xml = require("xlsx.xml.writer")
 local templates = require("xlsx.xml.templates")
 local zip = require("xlsx.zip")
+local doc_props = require("xlsx.parts.doc_props")
 
 local M = {}
 
@@ -75,6 +76,36 @@ function Workbook:get_sheet(name_or_index)
   end
 end
 
+--- Set the active (selected) sheet
+--- @param name_or_index string|integer Sheet name or index
+--- @return boolean success
+function Workbook:set_active_sheet(name_or_index)
+  if type(name_or_index) == "number" then
+    if name_or_index >= 1 and name_or_index <= #self.sheets then
+      self.active_sheet = name_or_index
+      return true
+    end
+  else
+    for i, sheet in ipairs(self.sheets) do
+      if sheet.name == name_or_index then
+        self.active_sheet = i
+        return true
+      end
+    end
+  end
+  return false
+end
+
+--- Set document properties
+--- @param props table Properties to set (creator, title, subject, etc.)
+function Workbook:set_properties(props)
+  for k, v in pairs(props) do
+    self.properties[k] = v
+  end
+  -- Update modified timestamp
+  self.properties.modified = os.date("!%Y-%m-%dT%H:%M:%SZ")
+end
+
 --- Generate [Content_Types].xml
 --- @return string
 function Workbook:_generate_content_types()
@@ -85,6 +116,16 @@ function Workbook:_generate_content_types()
   -- Default extensions
   b:empty("Default", { Extension = "rels", ContentType = templates.DEFAULT_EXTENSIONS.rels })
   b:empty("Default", { Extension = "xml", ContentType = templates.DEFAULT_EXTENSIONS.xml })
+
+  -- Document properties
+  b:empty("Override", {
+    PartName = "/docProps/core.xml",
+    ContentType = templates.CONTENT_TYPES.CORE_PROPS,
+  })
+  b:empty("Override", {
+    PartName = "/docProps/app.xml",
+    ContentType = templates.CONTENT_TYPES.EXT_PROPS,
+  })
 
   -- Override for workbook
   b:empty("Override", {
@@ -121,6 +162,18 @@ function Workbook:_generate_root_rels()
     Id = "rId1",
     Type = templates.NS.REL_OFFICE_DOC,
     Target = "xl/workbook.xml",
+  })
+
+  b:empty("Relationship", {
+    Id = "rId2",
+    Type = templates.NS.REL_CORE_PROPS,
+    Target = "docProps/core.xml",
+  })
+
+  b:empty("Relationship", {
+    Id = "rId3",
+    Type = templates.NS.REL_EXT_PROPS,
+    Target = "docProps/app.xml",
   })
 
   b:close("Relationships")
@@ -167,8 +220,9 @@ function Workbook:_generate_workbook_xml()
     ["xmlns:r"] = templates.NS.RELATIONSHIPS,
   })
 
-  -- Workbook views
-  b:raw('<bookViews><workbookView/></bookViews>')
+  -- Workbook views with active tab
+  local active_tab = (self.active_sheet or 1) - 1  -- 0-indexed
+  b:raw('<bookViews><workbookView activeTab="' .. active_tab .. '"/></bookViews>')
 
   -- Sheets
   b:open("sheets")
@@ -230,6 +284,9 @@ function Workbook:save(filepath)
     end
   end
 
+  -- Update modified timestamp
+  self.properties.modified = os.date("!%Y-%m-%dT%H:%M:%SZ")
+
   -- Create temporary directory
   local temp_dir = zip.create_temp_dir()
 
@@ -249,6 +306,20 @@ function Workbook:save(filepath)
   ok, err = zip.write_file(
     temp_dir .. "/_rels/.rels",
     self:_generate_root_rels()
+  )
+  if not ok then return cleanup_and_fail(err) end
+
+  -- Write docProps/core.xml
+  ok, err = zip.write_file(
+    temp_dir .. "/docProps/core.xml",
+    doc_props.generate_core(self.properties)
+  )
+  if not ok then return cleanup_and_fail(err) end
+
+  -- Write docProps/app.xml
+  ok, err = zip.write_file(
+    temp_dir .. "/docProps/app.xml",
+    doc_props.generate_app(self.properties, self)
   )
   if not ok then return cleanup_and_fail(err) end
 
@@ -275,9 +346,11 @@ function Workbook:save(filepath)
 
   -- Write each worksheet
   for i, sheet in ipairs(self.sheets) do
+    -- Pass whether this sheet is active
+    local is_active = (i == self.active_sheet)
     ok, err = zip.write_file(
       temp_dir .. "/xl/worksheets/sheet" .. i .. ".xml",
-      sheet:to_xml()
+      sheet:to_xml(is_active)
     )
     if not ok then return cleanup_and_fail(err) end
   end
