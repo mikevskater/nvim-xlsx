@@ -1,0 +1,1063 @@
+*nvim-xlsx.txt*  Pure Lua XLSX library for Neovim
+
+Author:   mikevskater
+License:  MIT
+Version:  0.6.0
+
+==============================================================================
+CONTENTS                                                    *nvim-xlsx-contents*
+
+    1. Introduction ......................... |nvim-xlsx-introduction|
+    2. Requirements ......................... |nvim-xlsx-requirements|
+    3. Quick Start .......................... |nvim-xlsx-quickstart|
+    4. API .................................. |nvim-xlsx-api|
+    5. Workbook ............................. |nvim-xlsx-workbook|
+    6. Worksheet ............................ |nvim-xlsx-worksheet|
+    7. Styling .............................. |nvim-xlsx-styling|
+    8. Reading Files ........................ |nvim-xlsx-reading|
+    9. Utilities ............................ |nvim-xlsx-utilities|
+   10. FAQ .................................. |nvim-xlsx-faq|
+
+==============================================================================
+1. INTRODUCTION                                         *nvim-xlsx-introduction*
+
+nvim-xlsx is a pure Lua library for creating, reading, and modifying Microsoft
+Excel .xlsx files in Neovim. It requires no external Lua dependencies.
+
+Features:~
+  - Create workbooks with multiple sheets
+  - Cell operations: text, numbers, formulas, dates, booleans
+  - Styling: fonts, colors, borders, alignment, number formats
+  - Cell merging, freeze panes, auto-filter
+  - Data validation and dropdowns
+  - Hyperlinks (URLs, email, internal references)
+  - Print settings (margins, orientation, areas)
+  - Read existing .xlsx files
+  - Import/export to Lua tables and CSV
+
+==============================================================================
+2. REQUIREMENTS                                         *nvim-xlsx-requirements*
+
+- Neovim >= 0.9.0 (0.11+ recommended)
+- `zip` and `unzip` commands (or PowerShell on Windows)
+
+Windows:~
+  PowerShell 3.0+ (built-in on Windows 7 SP1+)
+
+Linux:~
+  `apt install zip unzip` (Debian/Ubuntu)
+  `dnf install zip unzip` (Fedora)
+
+macOS:~
+  Xcode Command Line Tools (`xcode-select --install`)
+
+==============================================================================
+3. QUICK START                                           *nvim-xlsx-quickstart*
+
+Create a simple spreadsheet:
+>lua
+    local xlsx = require("xlsx")
+
+    -- Create workbook with one sheet
+    local wb = xlsx.new_workbook()
+    local sheet = wb:add_sheet("Data")
+
+    -- Add data
+    sheet:set_cell(1, 1, "Hello")
+    sheet:set_cell(1, 2, 42)
+
+    -- Save
+    wb:save("output.xlsx")
+<
+
+Export a Lua table:
+>lua
+    local xlsx = require("xlsx")
+
+    -- Define data as 2D array
+    local data = {
+      {"Name", "Age"},
+      {"Alice", 30},
+      {"Bob", 25},
+    }
+
+    -- Export to XLSX file
+    xlsx.export_table(data, "people.xlsx")
+<
+
+Read an existing file:
+>lua
+    local xlsx = require("xlsx")
+
+    -- Import as 2D array
+    local data = xlsx.import_table("input.xlsx")
+
+    -- Iterate through rows
+    for _, row in ipairs(data) do
+      print(row[1], row[2])
+    end
+<
+
+==============================================================================
+4. API                                                           *nvim-xlsx-api*
+
+                                                          *xlsx.new_workbook()*
+xlsx.new_workbook()
+    Create a new empty workbook.
+
+    Returns: ~
+        {Workbook} A new workbook instance
+
+                                                          *xlsx.export_table()*
+xlsx.export_table({data}, {filepath}, {opts?})
+    Export a 2D Lua table to an XLSX file.
+
+    Parameters: ~
+        {data}      (table[])  Array of rows, each row is an array of values
+        {filepath}  (string)   Output file path
+        {opts}      (table?)   Options:
+                               - sheet_name (string): Sheet name
+                               - headers (string[]): Header row
+
+    Returns: ~
+        (boolean) Success status
+        (string?) Error message
+
+                                                          *xlsx.import_table()*
+xlsx.import_table({filepath}, {opts?})
+    Import an XLSX file as a 2D Lua table.
+
+    Parameters: ~
+        {filepath}  (string)  Path to XLSX file
+        {opts}      (table?)  Options:
+                              - sheet_name (string): Sheet to import
+                              - sheet_index (integer): Sheet index (1-based)
+
+    Returns: ~
+        (table[]?) 2D array of values
+        (string?)  Error message
+
+                                                                  *xlsx.open()*
+xlsx.open({filepath})
+    Open an existing XLSX file for reading.
+
+    Parameters: ~
+        {filepath}  (string)  Path to XLSX file
+
+    Returns: ~
+        (table?)   Parsed workbook data
+        (string?)  Error message
+
+                                                                  *xlsx.info()*
+xlsx.info({filepath})
+    Get information about an XLSX file without fully loading it.
+
+    Parameters: ~
+        {filepath}  (string)  Path to XLSX file
+
+    Returns: ~
+        (table?)   File info with sheets, sheet_count, properties
+        (string?)  Error message
+
+                                                              *xlsx.from_csv()*
+xlsx.from_csv({csv_string}, {filepath}, {opts?})
+    Create an XLSX file from a CSV string.
+
+    Parameters: ~
+        {csv_string}  (string)  CSV content
+        {filepath}    (string)  Output XLSX path
+        {opts}        (table?)  Options:
+                                - delimiter (string): CSV delimiter
+                                - sheet_name (string): Sheet name
+
+    Returns: ~
+        (boolean) Success status
+        (string?) Error message
+
+                                                         *xlsx.from_csv_file()*
+xlsx.from_csv_file({csv_path}, {xlsx_path}, {opts?})
+    Create an XLSX file from a CSV file.
+
+    Parameters: ~
+        {csv_path}   (string)  Path to CSV file
+        {xlsx_path}  (string)  Output XLSX path
+        {opts}       (table?)  Same options as from_csv()
+
+    Returns: ~
+        (boolean) Success status
+        (string?) Error message
+
+                                                                *xlsx.to_csv()*
+xlsx.to_csv({filepath}, {opts?})
+    Export an XLSX file to CSV string.
+
+    Parameters: ~
+        {filepath}  (string)  Path to XLSX file
+        {opts}      (table?)  Options:
+                              - sheet_name (string): Sheet to export
+                              - sheet_index (integer): Sheet index
+                              - delimiter (string): CSV delimiter
+
+    Returns: ~
+        (string?) CSV content
+        (string?) Error message
+
+==============================================================================
+5. WORKBOOK                                                 *nvim-xlsx-workbook*
+
+                                                        *Workbook:add_sheet()*
+Workbook:add_sheet({name?})
+    Add a new worksheet to the workbook.
+
+    Parameters: ~
+        {name}  (string?)  Sheet name (auto-generated if omitted)
+
+    Returns: ~
+        (Worksheet?) New worksheet
+        (string?)    Error message
+
+                                                        *Workbook:get_sheet()*
+Workbook:get_sheet({name_or_index})
+    Get a worksheet by name or index.
+
+    Parameters: ~
+        {name_or_index}  (string|integer)  Sheet name or 1-based index
+
+    Returns: ~
+        (Worksheet?) The worksheet or nil
+
+                                                  *Workbook:set_active_sheet()*
+Workbook:set_active_sheet({name_or_index})
+    Set which sheet is active (selected) when the file is opened.
+
+    Parameters: ~
+        {name_or_index}  (string|integer)  Sheet name or 1-based index
+
+    Returns: ~
+        (boolean) Success status
+
+                                                     *Workbook:create_style()*
+Workbook:create_style({def})
+    Create a reusable style.
+
+    Parameters: ~
+        {def}  (table)  Style definition (see |nvim-xlsx-styling|)
+
+    Returns: ~
+        (integer) Style index for use with cells
+
+                                                   *Workbook:set_properties()*
+Workbook:set_properties({props})
+    Set document properties.
+
+    Parameters: ~
+        {props}  (table)  Properties:
+                          - creator (string): Document author
+                          - title (string): Document title
+                          - subject (string): Document subject
+                          - description (string): Document description
+                          - keywords (string): Keywords/tags
+                          - category (string): Document category
+                          - lastModifiedBy (string): Last editor
+                          - created (string): Creation date (ISO format)
+                          - modified (string): Modification date (ISO format)
+
+                                                            *Workbook:save()*
+Workbook:save({filepath})
+    Save the workbook to a file.
+
+    Parameters: ~
+        {filepath}  (string)  Output file path
+
+    Returns: ~
+        (boolean) Success status
+        (string?) Error message
+
+==============================================================================
+6. WORKSHEET                                               *nvim-xlsx-worksheet*
+
+CELL OPERATIONS ~
+
+                                                       *Worksheet:set_cell()*
+Worksheet:set_cell({row}, {col}, {value})
+    Set a cell value.
+
+    Parameters: ~
+        {row}    (integer)  Row number (1-indexed)
+        {col}    (integer)  Column number (1-indexed)
+        {value}  (any)      Cell value
+
+    Returns: ~
+        (Cell) The created/updated cell
+
+                                                       *Worksheet:get_cell()*
+Worksheet:get_cell({row}, {col})
+    Get a cell (or nil if not set).
+
+    Parameters: ~
+        {row}  (integer)  Row number
+        {col}  (integer)  Column number
+
+    Returns: ~
+        (Cell?) The cell or nil
+
+                                                            *Worksheet:set()*
+Worksheet:set({ref}, {value})
+    Set a cell using A1 notation.
+
+    Parameters: ~
+        {ref}    (string)  Cell reference (e.g., "A1", "B2")
+        {value}  (any)     Cell value
+
+    Example: `sheet:set("A1", "Hello")`
+
+                                                            *Worksheet:get()*
+Worksheet:get({ref})
+    Get a cell using A1 notation.
+
+    Parameters: ~
+        {ref}  (string)  Cell reference
+
+    Returns: ~
+        (Cell?) The cell or nil
+
+                                                    *Worksheet:set_cell_value()*
+Worksheet:set_cell_value({row}, {col}, {value}, {style_index?})
+    Set cell value with optional style.
+
+    Parameters: ~
+        {row}          (integer)   Row number
+        {col}          (integer)   Column number
+        {value}        (any)       Cell value
+        {style_index}  (integer?)  Optional style index
+
+    Returns: ~
+        (Cell) The updated cell
+
+                                                       *Worksheet:set_formula()*
+Worksheet:set_formula({row}, {col}, {formula}, {style_index?})
+    Set a formula in a cell.
+
+    Parameters: ~
+        {row}          (integer)   Row number
+        {col}          (integer)   Column number
+        {formula}      (string)    Formula (with or without leading =)
+        {style_index}  (integer?)  Optional style index
+
+    Example: `sheet:set_formula(3, 1, "=SUM(A1:A2)")`
+
+                                                          *Worksheet:set_date()*
+Worksheet:set_date({row}, {col}, {date_value}, {style_index?})
+    Set a date value in a cell.
+
+    Parameters: ~
+        {row}          (integer)        Row number
+        {col}          (integer)        Column number
+        {date_value}   (number|table)   Excel serial or date table
+        {style_index}  (integer?)       Optional style index
+
+    The {date_value} can be:
+    - Excel serial number (integer or float)
+    - Date table: `{year=2024, month=1, day=15, hour=?, min=?, sec=?}`
+
+                                                       *Worksheet:set_boolean()*
+Worksheet:set_boolean({row}, {col}, {value}, {style_index?})
+    Set a boolean value in a cell.
+
+    Parameters: ~
+        {row}          (integer)   Row number
+        {col}          (integer)   Column number
+        {value}        (boolean)   Boolean value
+        {style_index}  (integer?)  Optional style index
+
+DIMENSION AND LAYOUT ~
+
+                                                    *Worksheet:get_dimension()*
+Worksheet:get_dimension()
+    Get the dimension string (e.g., "A1:C10").
+
+    Returns: ~
+        (string) Dimension reference
+
+                                                 *Worksheet:set_column_width()*
+Worksheet:set_column_width({col}, {width})
+    Set column width in characters.
+
+    Parameters: ~
+        {col}    (integer)  Column number
+        {width}  (number)   Width in characters
+
+                                                  *Worksheet:set_row_height()*
+Worksheet:set_row_height({row}, {height})
+    Set row height in points.
+
+    Parameters: ~
+        {row}     (integer)  Row number
+        {height}  (number)   Height in points
+
+STYLING ~
+
+                                                  *Worksheet:set_cell_style()*
+Worksheet:set_cell_style({row}, {col}, {style_index})
+    Apply a style to a cell.
+
+    Parameters: ~
+        {row}          (integer)  Row number
+        {col}          (integer)  Column number
+        {style_index}  (integer)  Style index from create_style()
+
+                                                 *Worksheet:set_range_style()*
+Worksheet:set_range_style({r1}, {c1}, {r2}, {c2}, {style_index})
+    Apply a style to a range of cells.
+
+    Parameters: ~
+        {r1}           (integer)  Start row
+        {c1}           (integer)  Start column
+        {r2}           (integer)  End row
+        {c2}           (integer)  End column
+        {style_index}  (integer)  Style index
+
+MERGING ~
+
+                                                    *Worksheet:merge_cells()*
+Worksheet:merge_cells({r1}, {c1}, {r2}, {c2})
+    Merge cells in a range.
+
+    Parameters: ~
+        {r1}  (integer)  Start row
+        {c1}  (integer)  Start column
+        {r2}  (integer)  End row
+        {c2}  (integer)  End column
+
+    Returns: ~
+        (boolean) Success status
+        (string?) Error message
+
+                                                    *Worksheet:merge_range()*
+Worksheet:merge_range({range})
+    Merge cells using A1:B2 notation.
+
+    Parameters: ~
+        {range}  (string)  Range reference (e.g., "A1:B2")
+
+    Returns: ~
+        (boolean) Success status
+        (string?) Error message
+
+FREEZE PANES ~
+
+                                                    *Worksheet:freeze_panes()*
+Worksheet:freeze_panes({rows}, {cols})
+    Freeze rows and/or columns.
+
+    Parameters: ~
+        {rows}  (integer)  Number of rows to freeze (0 for none)
+        {cols}  (integer)  Number of columns to freeze (0 for none)
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+    Example: `sheet:freeze_panes(1, 0)` freezes the first row.
+
+                                                     *Worksheet:freeze_rows()*
+Worksheet:freeze_rows({n})
+    Freeze the first N rows.
+
+    Parameters: ~
+        {n}  (integer)  Number of rows to freeze
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+                                                     *Worksheet:freeze_cols()*
+Worksheet:freeze_cols({n})
+    Freeze the first N columns.
+
+    Parameters: ~
+        {n}  (integer)  Number of columns to freeze
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+AUTO-FILTER ~
+
+                                                   *Worksheet:set_auto_filter()*
+Worksheet:set_auto_filter({r1}, {c1}, {r2}, {c2})
+    Set auto-filter for a range.
+
+    Parameters: ~
+        {r1}  (integer?)  Start row (nil to clear)
+        {c1}  (integer?)  Start column
+        {r2}  (integer?)  End row
+        {c2}  (integer?)  End column
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+                                              *Worksheet:set_auto_filter_range()*
+Worksheet:set_auto_filter_range({range})
+    Set auto-filter using A1:B2 notation.
+
+    Parameters: ~
+        {range}  (string)  Range reference (e.g., "A1:D10")
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+DATA VALIDATION ~
+
+                                                *Worksheet:add_data_validation()*
+Worksheet:add_data_validation({ref}, {validation_opts})
+    Add data validation to a cell or range.
+
+    Parameters: ~
+        {ref}              (string)  Cell or range reference
+        {validation_opts}  (table)   Validation options:
+            - type (string): "list", "whole", "decimal", "date", etc.
+            - operator (string): "between", "equal", "greaterThan", etc.
+            - formula1 (string): First formula/value
+            - formula2 (string): Second formula/value
+            - allowBlank (boolean): Allow blank cells
+            - showDropDown (boolean): Show dropdown
+            - showInputMessage (boolean): Show input message
+            - showErrorMessage (boolean): Show error message
+            - promptTitle (string): Input message title
+            - prompt (string): Input message text
+            - errorTitle (string): Error message title
+            - error (string): Error message text
+            - errorStyle (string): "stop", "warning", "information"
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+                                                     *Worksheet:add_dropdown()*
+Worksheet:add_dropdown({ref}, {items}, {opts?})
+    Add a dropdown list validation.
+
+    Parameters: ~
+        {ref}    (string)          Cell or range ("A1" or "A1:A10")
+        {items}  (string[]|string) List items or formula reference
+        {opts}   (table?)          Options:
+            - allowBlank (boolean)
+            - prompt (string): Input message text
+            - promptTitle (string): Input message title
+            - error (string): Error message
+            - errorTitle (string): Error message title
+            - errorStyle (string): "stop", "warning", "information"
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+    Example: `sheet:add_dropdown("B1:B10", {"Yes", "No", "Maybe"})`
+
+                                              *Worksheet:add_number_validation()*
+Worksheet:add_number_validation({ref}, {min}, {max}, {opts?})
+    Add number range validation.
+
+    Parameters: ~
+        {ref}   (string)         Cell or range reference
+        {min}   (number|string)  Minimum value or formula
+        {max}   (number|string)  Maximum value or formula
+        {opts}  (table?)         Options:
+            - allowBlank (boolean)
+            - allowDecimal (boolean)
+            - prompt (string)
+            - promptTitle (string)
+            - error (string)
+            - errorTitle (string)
+            - errorStyle (string)
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+HYPERLINKS ~
+
+                                                    *Worksheet:add_hyperlink()*
+Worksheet:add_hyperlink({row}, {col}, {target}, {opts?})
+    Add a hyperlink to a cell.
+
+    Parameters: ~
+        {row}     (integer)  Row number
+        {col}     (integer)  Column number
+        {target}  (string)   URL or internal reference
+        {opts}    (table?)   Options:
+            - tooltip (string): Tooltip text
+            - display_text (string): Display text for the link
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+    The {target} can be:
+    - External URL: `https://example.com`
+    - Email: `mailto:user@example.com`
+    - Internal: Cell reference
+
+PRINT SETTINGS ~
+
+                                                *Worksheet:set_print_settings()*
+Worksheet:set_print_settings({settings})
+    Set print settings for the worksheet.
+
+    Parameters: ~
+        {settings}  (table)  Print settings
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+                                                  *Worksheet:set_orientation()*
+Worksheet:set_orientation({orientation})
+    Set page orientation.
+
+    Parameters: ~
+        {orientation}  (string)  "portrait" or "landscape"
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+                                                      *Worksheet:set_margins()*
+Worksheet:set_margins({top}, {bottom}, {left}, {right}, {header?}, {footer?})
+    Set page margins in inches.
+
+    Parameters: ~
+        {top}     (number)   Top margin
+        {bottom}  (number)   Bottom margin
+        {left}    (number)   Left margin
+        {right}   (number)   Right margin
+        {header}  (number?)  Header margin (default: 0.3)
+        {footer}  (number?)  Footer margin (default: 0.3)
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+                                                   *Worksheet:set_print_area()*
+Worksheet:set_print_area({range})
+    Set the print area.
+
+    Parameters: ~
+        {range}  (string?)  Range to print (e.g., "A1:G20"), nil to clear
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+                                              *Worksheet:set_print_title_rows()*
+Worksheet:set_print_title_rows({rows})
+    Set rows to repeat at top of each page.
+
+    Parameters: ~
+        {rows}  (string)  Row range (e.g., "1:2" for first two rows)
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+                                              *Worksheet:set_print_title_cols()*
+Worksheet:set_print_title_cols({cols})
+    Set columns to repeat at left of each page.
+
+    Parameters: ~
+        {cols}  (string)  Column range (e.g., "A:B" for first two columns)
+
+    Returns: ~
+        (Worksheet) Self for chaining
+
+==============================================================================
+7. STYLING                                                 *nvim-xlsx-styling*
+
+Create styles with `workbook:create_style()`:
+>lua
+    local style = wb:create_style({
+      -- Font
+      font_name = "Arial",
+      font_size = 12,
+      bold = true,
+      italic = false,
+      underline = "single",
+      strike = false,
+      font_color = "#FF0000",
+
+      -- Fill
+      bg_color = "#FFFF00",
+      pattern = "solid",
+
+      -- Border
+      border = true,
+      border_style = "thin",
+      border_color = "#000000",
+      -- Or individual borders:
+      border_left = "thin",
+      border_right = { style = "medium", color = "#FF0000" },
+      border_top = "thin",
+      border_bottom = "thin",
+
+      -- Alignment
+      halign = "center",
+      valign = "center",
+      wrap_text = true,
+      indent = 1,
+      rotation = 0,
+
+      -- Number format
+      num_format = "0.00",
+    })
+
+    sheet:set_cell_style(1, 1, style)
+<
+
+FONT PROPERTIES ~
+
+    font_name      (string)   Font family (default: "Calibri")
+    font_size      (integer)  Font size in points (default: 11)
+    bold           (boolean)  Bold text
+    italic         (boolean)  Italic text
+    underline      (string)   "single", "double", "singleAccounting",
+                              "doubleAccounting", or boolean true
+    strike         (boolean)  Strikethrough
+    font_color     (string)   Text color (hex or named)
+
+FILL PROPERTIES ~
+
+    bg_color       (string)   Background color (hex or named)
+    fill_color     (string)   Alias for bg_color
+    pattern        (string)   Fill pattern (default: "solid")
+
+BORDER PROPERTIES ~
+
+    border         (boolean)  Apply thin border to all edges
+    border_style   (string)   Default border style for all edges
+    border_color   (string)   Default border color for all edges
+    border_left    (string|table)  Left border style or {style, color}
+    border_right   (string|table)  Right border style or {style, color}
+    border_top     (string|table)  Top border style or {style, color}
+    border_bottom  (string|table)  Bottom border style or {style, color}
+
+BORDER STYLES ~
+
+Available border styles:
+  `thin`, `medium`, `thick`, `dashed`, `dotted`, `double`, `hair`,
+  `mediumDashed`, `dashDot`, `mediumDashDot`, `dashDotDot`, `slantDashDot`
+
+ALIGNMENT PROPERTIES ~
+
+    halign         (string)   Horizontal: left, center, right, fill,
+                              justify, centerContinuous, distributed
+    valign         (string)   Vertical: top, center, bottom, justify,
+                              distributed
+    wrap_text      (boolean)  Enable text wrapping
+    wrap           (boolean)  Alias for wrap_text
+    indent         (integer)  Text indentation level
+    rotation       (integer)  Text rotation angle (degrees)
+
+NUMBER FORMAT ~
+
+    num_format     (string|integer)  Format code or built-in ID
+    number_format  (string|integer)  Alias for num_format
+
+BUILT-IN NUMBER FORMATS ~
+
+| Name               | ID | Display Format     |
+|--------------------|----|--------------------|
+| general            |  0 | General            |
+| number             |  1 | 0                  |
+| number_d2          |  2 | 0.00               |
+| number_thousands   |  3 | #,##0              |
+| percent            |  9 | 0%                 |
+| percent_d2         | 10 | 0.00%              |
+| date               | 14 | m/d/yyyy           |
+| time_24h           | 20 | h:mm               |
+| datetime           | 22 | m/d/yyyy h:mm      |
+| text               | 49 | @                  |
+
+Custom format examples:
+  `"$#,##0.00"` - Currency
+  `"yyyy-mm-dd"` - ISO date
+  `"0.00%"` - Percentage with decimals
+
+COLOR FORMATS ~
+
+Colors can be specified as:
+  - Named: "red", "blue", "green", "yellow", "white", "black", etc.
+  - Hex: "#RRGGBB" or "#AARRGGBB"
+  - Hex without #: "RRGGBB" or "AARRGGBB"
+
+==============================================================================
+8. READING FILES                                           *nvim-xlsx-reading*
+
+                                                        *xlsx.get_sheet_names()*
+xlsx.get_sheet_names({workbook})
+    Get list of sheet names from an opened workbook.
+
+    Parameters: ~
+        {workbook}  (table)  Opened workbook from xlsx.open()
+
+    Returns: ~
+        (string[]) Array of sheet names in order
+
+                                                             *xlsx.get_sheet()*
+xlsx.get_sheet({workbook}, {name})
+    Get a worksheet by name.
+
+    Parameters: ~
+        {workbook}  (table)   Opened workbook
+        {name}      (string)  Sheet name
+
+    Returns: ~
+        (table?) Worksheet data or nil
+
+                                                    *xlsx.get_sheet_by_index()*
+xlsx.get_sheet_by_index({workbook}, {index})
+    Get a worksheet by index.
+
+    Parameters: ~
+        {workbook}  (table)    Opened workbook
+        {index}     (integer)  Sheet index (1-based)
+
+    Returns: ~
+        (table?) Worksheet data or nil
+
+                                                              *xlsx.get_cell()*
+xlsx.get_cell({sheet}, {row}, {col})
+    Get a cell value from a worksheet.
+
+    Parameters: ~
+        {sheet}  (table)    Worksheet from get_sheet()
+        {row}    (integer)  Row number (1-indexed)
+        {col}    (integer)  Column number (1-indexed)
+
+    Returns: ~
+        (any?) Cell value
+
+                                                             *xlsx.get_range()*
+xlsx.get_range({sheet}, {r1}, {c1}, {r2}, {c2})
+    Get a range of values as a 2D array.
+
+    Parameters: ~
+        {sheet}  (table)    Worksheet
+        {r1}     (integer)  Start row
+        {c1}     (integer)  Start column
+        {r2}     (integer)  End row
+        {c2}     (integer)  End column
+
+    Returns: ~
+        (any[][]) 2D array of values
+
+                                                          *xlsx.get_all_data()*
+xlsx.get_all_data({sheet})
+    Get all data from a worksheet as a 2D array.
+
+    Parameters: ~
+        {sheet}  (table)  Worksheet
+
+    Returns: ~
+        (any[][]) 2D array of values
+
+Example:
+>lua
+    local wb = xlsx.open("data.xlsx")
+    local sheets = xlsx.get_sheet_names(wb)
+    local sheet = xlsx.get_sheet(wb, sheets[1])
+    local value = xlsx.get_cell(sheet, 1, 1)
+    local range = xlsx.get_range(sheet, 1, 1, 10, 5)
+<
+
+==============================================================================
+9. UTILITIES                                               *nvim-xlsx-utilities*
+
+DATE UTILITIES ~
+>lua
+    local date = require("xlsx").date
+
+    -- Convert Lua date table to Excel serial number
+    date.to_serial({year=2024, month=1, day=15})
+
+    -- Convert Excel serial to Lua date table
+    date.from_serial(45306)  -- {year=2024, month=1, day=15, ...}
+
+    -- Current datetime as Excel serial
+    date.now()
+
+    -- Today's date as Excel serial (no time component)
+    date.today()
+
+    -- Create date from components
+    date.date(2024, 1, 15)
+    date.date(2024, 1, 15, 14, 30, 0)  -- with time
+
+    -- Create time-only value (fractional day)
+    date.time(14, 30, 0)
+
+    -- Parse ISO 8601 string
+    date.parse_iso("2024-01-15")
+    date.parse_iso("2024-01-15T14:30:00")
+
+    -- Format as ISO string
+    date.format_iso(45306)
+    date.format_iso(45306.5, true)  -- include time
+
+    -- Unix timestamp conversion
+    date.from_unix_timestamp(1705305600)
+    date.to_unix_timestamp(45306)
+<
+
+COLUMN UTILITIES ~
+>lua
+    local utils = require("xlsx").utils
+
+    -- Column number to letter
+    utils.to_letter(1)     -- "A"
+    utils.to_letter(27)    -- "AA"
+    utils.to_letter(702)   -- "ZZ"
+
+    -- Column letter to number
+    utils.to_number("A")   -- 1
+    utils.to_number("AA")  -- 27
+
+    -- Parse cell reference
+    utils.parse_ref("A1")      -- {row=1, col=1}
+    utils.parse_ref("$A$1")    -- {row=1, col=1, abs_row=true, abs_col=true}
+
+    -- Create cell reference
+    utils.make_ref(1, 1)              -- "A1"
+    utils.make_ref(1, 1, true, true)  -- "$A$1"
+
+    -- Parse range reference
+    utils.parse_range("A1:B10")
+
+    -- Create range reference
+    utils.make_range(1, 1, 10, 2)  -- "A1:B10"
+<
+
+COLOR UTILITIES ~
+>lua
+    local color = require("xlsx.utils.color")
+
+    -- Convert to ARGB format
+    color.to_argb("#FF0000")   -- "FFFF0000"
+    color.to_argb("red")       -- "FFFF0000"
+
+    -- Parse ARGB to components
+    color.parse_argb("FFFF0000")  -- {a=255, r=255, g=0, b=0}
+
+    -- Create from RGB components
+    color.from_rgb(255, 0, 0)     -- "FFFF0000"
+    color.from_rgb(255, 0, 0, 128) -- "80FF0000" (semi-transparent)
+
+    -- Apply tint (lighten/darken)
+    color.apply_tint("FFFF0000", 0.5)   -- lighter
+    color.apply_tint("FFFF0000", -0.5)  -- darker
+<
+
+VALIDATION UTILITIES ~
+>lua
+    local validation = require("xlsx.utils.validation")
+
+    -- Check limits
+    validation.validate_row(1)
+    validation.validate_col(1)
+    validation.validate_cell_ref(1, 1)
+    validation.validate_range(1, 1, 10, 10)
+    validation.validate_sheet_name("Sheet1")
+<
+
+CONSTANTS ~
+>lua
+    local xlsx = require("xlsx")
+
+    xlsx.LIMITS.MAX_ROWS       -- 1,048,576
+    xlsx.LIMITS.MAX_COLS       -- 16,384
+    xlsx.LIMITS.MAX_CELL_TEXT  -- 32,767
+    xlsx.LIMITS.MAX_FORMULA_LENGTH  -- 8,192
+    xlsx.LIMITS.MAX_SHEET_NAME -- 31
+    xlsx.LIMITS.MAX_URL_LENGTH -- 2,083
+
+    xlsx.BORDER_STYLES  -- Border style names
+    xlsx.HALIGN         -- Horizontal alignment options
+    xlsx.VALIGN         -- Vertical alignment options
+    xlsx.UNDERLINE      -- Underline style options
+    xlsx.BUILTIN_FORMATS -- Built-in number format IDs
+<
+
+==============================================================================
+10. FAQ                                                        *nvim-xlsx-faq*
+
+Q: How do I format dates?
+A: Use `set_date()` and apply a date number format:
+>lua
+    local date_style = wb:create_style({ num_format = "date" })
+    sheet:set_date(1, 1, {year=2024, month=1, day=15})
+    sheet:set_cell_style(1, 1, date_style)
+<
+
+Q: How do I create a styled header row?
+A: Create a style and apply it to the range:
+>lua
+    local header = wb:create_style({
+      bold = true,
+      bg_color = "#4472C4",
+      font_color = "#FFFFFF",
+      halign = "center",
+    })
+    sheet:set_range_style(1, 1, 1, 5, header)
+<
+
+Q: How do I add a formula?
+A: Use `set_formula()`:
+>lua
+    sheet:set_formula(5, 1, "=SUM(A1:A4)")
+    sheet:set_formula(5, 2, "=AVERAGE(B1:B4)")
+<
+
+Q: How do I create a dropdown list?
+A: Use `add_dropdown()`:
+>lua
+    sheet:add_dropdown("B2:B10", {"Option A", "Option B", "Option C"})
+<
+
+Q: How do I merge cells?
+A: Use `merge_cells()`:
+>lua
+    sheet:set_cell(1, 1, "Merged Header")
+    sheet:merge_cells(1, 1, 1, 5)  -- Merge A1:E1
+<
+
+Q: Can I read password-protected files?
+A: No, password-protected files are not supported.
+
+Q: What's the maximum file size?
+A: Limited by available memory. Large files (100k+ rows) may be slow.
+
+Q: Are charts supported?
+A: No, chart creation and reading is not currently supported.
+
+Q: Can I insert images?
+A: No, image insertion is not currently supported.
+
+Q: Are pivot tables supported?
+A: No, pivot tables are not currently supported.
+
+Q: How do I freeze the first row?
+A: Use `freeze_rows()` or `freeze_panes()`:
+>lua
+    sheet:freeze_rows(1)
+    -- or
+    sheet:freeze_panes(1, 0)
+<
+
+Q: How do I add a hyperlink?
+A: Use `add_hyperlink()`:
+>lua
+    sheet:set_cell(1, 1, "Click here")
+    sheet:add_hyperlink(1, 1, "https://example.com", {
+      tooltip = "Visit website"
+    })
+<
+
+Q: How do I set print settings?
+A: Use the print setting methods:
+>lua
+    sheet:set_orientation("landscape")
+    sheet:set_margins(0.5, 0.5, 0.5, 0.5)
+    sheet:set_print_area("A1:F20")
+    sheet:set_print_title_rows("1:1")
+<
+
+==============================================================================
+ vim:tw=78:ts=8:ft=help:norl:
