@@ -249,8 +249,9 @@ function Worksheet:_generate_cols()
 end
 
 --- Generate the complete worksheet XML
+--- @param is_active? boolean Whether this sheet is the active/selected sheet
 --- @return string
-function Worksheet:to_xml()
+function Worksheet:to_xml(is_active)
   local b = xml.builder()
 
   b:declaration()
@@ -262,8 +263,9 @@ function Worksheet:to_xml()
   -- Dimension
   b:empty("dimension", { ref = self:get_dimension() })
 
-  -- Sheet views (minimal)
-  b:raw('<sheetViews><sheetView tabSelected="1" workbookViewId="0"/></sheetViews>')
+  -- Sheet views with tabSelected based on active status
+  local tab_selected = is_active and "1" or "0"
+  b:raw('<sheetViews><sheetView tabSelected="' .. tab_selected .. '" workbookViewId="0"/></sheetViews>')
 
   -- Sheet format defaults
   b:empty("sheetFormatPr", { defaultRowHeight = "15" })
