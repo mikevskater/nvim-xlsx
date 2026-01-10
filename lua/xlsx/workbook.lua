@@ -255,6 +255,32 @@ function Workbook:_generate_styles_xml()
   return self.styles:to_xml()
 end
 
+--- Generate xl/worksheets/_rels/sheetN.xml.rels for a worksheet
+--- @param sheet Worksheet The worksheet
+--- @return string? XML content, or nil if no relationships needed
+function Workbook:_generate_worksheet_rels(sheet)
+  local rels = sheet:get_hyperlink_relationships()
+  if #rels == 0 then
+    return nil
+  end
+
+  local b = xml.builder()
+  b:declaration()
+  b:open("Relationships", { xmlns = templates.NS.PACKAGE_RELS })
+
+  for _, rel in ipairs(rels) do
+    b:empty("Relationship", {
+      Id = rel.id,
+      Type = rel.type,
+      Target = rel.target,
+      TargetMode = rel.targetMode,
+    })
+  end
+
+  b:close("Relationships")
+  return b:to_string()
+end
+
 --- Save workbook to file
 --- @param filepath string Output file path
 --- @return boolean success
@@ -328,7 +354,7 @@ function Workbook:save(filepath)
   )
   if not ok then return cleanup_and_fail(err) end
 
-  -- Write each worksheet
+  -- Write each worksheet and its relationships
   for i, sheet in ipairs(self.sheets) do
     -- Pass whether this sheet is active
     local is_active = (i == self.active_sheet)
@@ -337,6 +363,16 @@ function Workbook:save(filepath)
       sheet:to_xml(is_active)
     )
     if not ok then return cleanup_and_fail(err) end
+
+    -- Write worksheet relationships if needed (for external hyperlinks)
+    local sheet_rels = self:_generate_worksheet_rels(sheet)
+    if sheet_rels then
+      ok, err = zip.write_file(
+        temp_dir .. "/xl/worksheets/_rels/sheet" .. i .. ".xml.rels",
+        sheet_rels
+      )
+      if not ok then return cleanup_and_fail(err) end
+    end
   end
 
   -- Create ZIP file

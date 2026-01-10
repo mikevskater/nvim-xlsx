@@ -6,7 +6,7 @@ local reader = require("xlsx.reader")
 
 local M = {}
 
-M._VERSION = "0.4.0"
+M._VERSION = "0.5.0"
 
 --- Create a new empty workbook
 --- @return Workbook
