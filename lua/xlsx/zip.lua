@@ -206,10 +206,25 @@ local function unzip_windows(zip_path, dest_dir)
   -- Create destination directory if it doesn't exist
   vim.fn.mkdir(dest_dir, "p")
 
+  -- PowerShell's Expand-Archive only accepts .zip extension
+  -- For .xlsx and other files, we need to copy and rename first
+  local actual_path = zip_path
+  local temp_zip = nil
+
+  if not zip_path:lower():match("%.zip$") then
+    -- Copy the file to dest_dir with .zip extension
+    temp_zip = dest_dir .. "/__temp_extract__.zip"
+    local copy_ok = vim.fn.writefile(vim.fn.readfile(zip_path, "b"), temp_zip, "b")
+    if copy_ok ~= 0 then
+      return false, "Failed to copy file for extraction"
+    end
+    actual_path = temp_zip
+  end
+
   local ps_script = string.format(
     [[$ErrorActionPreference = 'Stop'; ]] ..
     [[Expand-Archive -Path '%s' -DestinationPath '%s' -Force]],
-    zip_path:gsub("'", "''"),
+    actual_path:gsub("'", "''"),
     dest_dir:gsub("'", "''")
   )
 
@@ -219,6 +234,11 @@ local function unzip_windows(zip_path, dest_dir)
     "-Command",
     ps_script,
   })
+
+  -- Clean up temp zip file
+  if temp_zip then
+    vim.fn.delete(temp_zip)
+  end
 
   if not success then
     return false, "Failed to extract ZIP: " .. output
