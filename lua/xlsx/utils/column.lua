@@ -1,6 +1,9 @@
 --- Column utilities for Excel column/cell reference handling
 --- @module xlsx.utils.column
 
+local validation = require("xlsx.utils.validation")
+local LIMITS = validation.LIMITS
+
 local M = {}
 
 --- Convert a column number to Excel letter notation
@@ -10,8 +13,8 @@ function M.to_letter(num)
   if num < 1 then
     error("Column number must be >= 1, got: " .. tostring(num))
   end
-  if num > 16384 then
-    error("Column number exceeds Excel maximum (16384), got: " .. tostring(num))
+  if num > LIMITS.MAX_COLS then
+    error("Column number exceeds Excel maximum (" .. LIMITS.MAX_COLS .. "), got: " .. tostring(num))
   end
 
   local result = ""
@@ -41,8 +44,8 @@ function M.to_number(str)
     num = num * 26 + (string.byte(char) - 64)
   end
 
-  if num > 16384 then
-    error("Column exceeds Excel maximum (XFD/16384): " .. str)
+  if num > LIMITS.MAX_COLS then
+    error("Column exceeds Excel maximum (XFD/" .. LIMITS.MAX_COLS .. "): " .. str)
   end
 
   return num
@@ -77,8 +80,8 @@ function M.parse_ref(ref)
   end
 
   local row = tonumber(row_str)
-  if row < 1 or row > 1048576 then
-    error("Row number out of range (1-1048576): " .. row_str)
+  if row < 1 or row > LIMITS.MAX_ROWS then
+    error("Row number out of range (1-" .. LIMITS.MAX_ROWS .. "): " .. row_str)
   end
 
   return {
@@ -96,8 +99,8 @@ end
 --- @param abs_col? boolean Make column absolute ($)
 --- @return string Cell reference (e.g., "A1", "$A$1")
 function M.make_ref(row, col, abs_row, abs_col)
-  if row < 1 or row > 1048576 then
-    error("Row number out of range (1-1048576): " .. tostring(row))
+  if row < 1 or row > LIMITS.MAX_ROWS then
+    error("Row number out of range (1-" .. LIMITS.MAX_ROWS .. "): " .. tostring(row))
   end
 
   local ref = ""
