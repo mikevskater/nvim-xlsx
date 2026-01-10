@@ -3,8 +3,12 @@
 
 local Cell = require("xlsx.cell")
 local column_utils = require("xlsx.utils.column")
+local date_utils = require("xlsx.utils.date")
+local validation = require("xlsx.utils.validation")
 local xml = require("xlsx.xml.writer")
 local templates = require("xlsx.xml.templates")
+
+local LIMITS = validation.LIMITS
 
 local M = {}
 
@@ -71,28 +75,6 @@ local M = {}
 local Worksheet = {}
 Worksheet.__index = Worksheet
 
---- Validate sheet name
---- @param name string Sheet name to validate
---- @return boolean valid
---- @return string? error_message
-local function validate_sheet_name(name)
-  if not name or name == "" then
-    return false, "Sheet name cannot be empty"
-  end
-  if #name > 31 then
-    return false, "Sheet name cannot exceed 31 characters"
-  end
-  -- Check for forbidden characters
-  if name:match("[\\/%*%?%[%]:]") then
-    return false, "Sheet name cannot contain: \\ / * ? [ ] :"
-  end
-  -- Cannot start or end with apostrophe
-  if name:sub(1, 1) == "'" or name:sub(-1) == "'" then
-    return false, "Sheet name cannot start or end with apostrophe"
-  end
-  return true
-end
-
 --- Create a new worksheet
 --- @param name string Sheet name
 --- @param index integer Sheet index
@@ -100,9 +82,9 @@ end
 --- @return Worksheet? worksheet
 --- @return string? error_message
 function M.new(name, index, workbook)
-  local valid, err = validate_sheet_name(name)
-  if not valid then
-    return nil, err
+  local result = validation.validate_sheet_name(name)
+  if not result.valid then
+    return nil, result.error
   end
 
   local self = setmetatable({}, Worksheet)
@@ -151,12 +133,8 @@ end
 --- @return Cell
 function Worksheet:set_cell(row, col, value)
   -- Validate bounds
-  if row < 1 or row > 1048576 then
-    error("Row out of range (1-1048576): " .. tostring(row))
-  end
-  if col < 1 or col > 16384 then
-    error("Column out of range (1-16384): " .. tostring(col))
-  end
+  validation.check(validation.validate_row(row))
+  validation.check(validation.validate_col(col))
 
   -- Create row if needed
   if not self.rows[row] then
@@ -225,7 +203,6 @@ function Worksheet:set_cell_style(row, col, style_index)
     cell.style_index = style_index
   else
     -- Create empty cell with style
-    local Cell = require("xlsx.cell")
     if not self.rows[row] then
       self.rows[row] = {}
     end
@@ -282,11 +259,9 @@ end
 --- @return string? error_message
 function Worksheet:merge_cells(r1, c1, r2, c2)
   -- Validate bounds
-  if r1 < 1 or r1 > 1048576 or r2 < 1 or r2 > 1048576 then
-    return false, "Row out of range (1-1048576)"
-  end
-  if c1 < 1 or c1 > 16384 or c2 < 1 or c2 > 16384 then
-    return false, "Column out of range (1-16384)"
+  local ok, err = validation.check_soft(validation.validate_range(r1, c1, r2, c2))
+  if not ok then
+    return false, err
   end
 
   -- Normalize coordinates (ensure r1 <= r2, c1 <= c2)
@@ -364,7 +339,6 @@ end
 function Worksheet:set_date(row, col, date_value, style_index)
   local serial
   if type(date_value) == "table" then
-    local date_utils = require("xlsx.utils.date")
     serial = date_utils.to_serial(date_value)
   else
     serial = date_value
@@ -395,11 +369,11 @@ function Worksheet:freeze_panes(rows, cols)
   rows = rows or 0
   cols = cols or 0
 
-  if rows < 0 or rows > 1048576 then
-    error("Freeze rows out of range (0-1048576): " .. tostring(rows))
+  if rows < 0 or rows > LIMITS.MAX_ROWS then
+    error("Freeze rows out of range (0-" .. LIMITS.MAX_ROWS .. "): " .. tostring(rows))
   end
-  if cols < 0 or cols > 16384 then
-    error("Freeze cols out of range (0-16384): " .. tostring(cols))
+  if cols < 0 or cols > LIMITS.MAX_COLS then
+    error("Freeze cols out of range (0-" .. LIMITS.MAX_COLS .. "): " .. tostring(cols))
   end
 
   if rows == 0 and cols == 0 then
@@ -438,12 +412,7 @@ function Worksheet:set_auto_filter(r1, c1, r2, c2)
   end
 
   -- Validate bounds
-  if r1 < 1 or r1 > 1048576 or r2 < 1 or r2 > 1048576 then
-    error("Row out of range (1-1048576)")
-  end
-  if c1 < 1 or c1 > 16384 or c2 < 1 or c2 > 16384 then
-    error("Column out of range (1-16384)")
-  end
+  validation.check(validation.validate_range(r1, c1, r2, c2))
 
   -- Normalize coordinates
   if r1 > r2 then r1, r2 = r2, r1 end
@@ -615,6 +584,16 @@ function Worksheet:set_print_settings(settings)
   return self
 end
 
+--- Ensure print_settings table exists
+--- @return WorksheetPrintSettings
+--- @private
+function Worksheet:_ensure_print_settings()
+  if not self.print_settings then
+    self.print_settings = {}
+  end
+  return self.print_settings
+end
+
 --- Set page margins (in inches)
 --- @param top number Top margin
 --- @param bottom number Bottom margin
@@ -624,10 +603,7 @@ end
 --- @param footer? number Footer margin (default 0.3)
 --- @return Worksheet self For chaining
 function Worksheet:set_margins(top, bottom, left, right, header, footer)
-  if not self.print_settings then
-    self.print_settings = {}
-  end
-  self.print_settings.margins = {
+  self:_ensure_print_settings().margins = {
     top = top,
     bottom = bottom,
     left = left,
@@ -645,10 +621,7 @@ function Worksheet:set_orientation(orientation)
   if orientation ~= "portrait" and orientation ~= "landscape" then
     error("Orientation must be 'portrait' or 'landscape'")
   end
-  if not self.print_settings then
-    self.print_settings = {}
-  end
-  self.print_settings.orientation = orientation
+  self:_ensure_print_settings().orientation = orientation
   return self
 end
 
@@ -656,10 +629,7 @@ end
 --- @param range string Range to print (e.g., "A1:G20"), or nil to clear
 --- @return Worksheet self For chaining
 function Worksheet:set_print_area(range)
-  if not self.print_settings then
-    self.print_settings = {}
-  end
-  self.print_settings.printArea = range
+  self:_ensure_print_settings().printArea = range
   return self
 end
 
@@ -667,10 +637,7 @@ end
 --- @param rows string Row range (e.g., "1:2" for first two rows)
 --- @return Worksheet self For chaining
 function Worksheet:set_print_title_rows(rows)
-  if not self.print_settings then
-    self.print_settings = {}
-  end
-  self.print_settings.printTitleRows = rows
+  self:_ensure_print_settings().printTitleRows = rows
   return self
 end
 
@@ -678,10 +645,7 @@ end
 --- @param cols string Column range (e.g., "A:B" for first two columns)
 --- @return Worksheet self For chaining
 function Worksheet:set_print_title_cols(cols)
-  if not self.print_settings then
-    self.print_settings = {}
-  end
-  self.print_settings.printTitleCols = cols
+  self:_ensure_print_settings().printTitleCols = cols
   return self
 end
 
