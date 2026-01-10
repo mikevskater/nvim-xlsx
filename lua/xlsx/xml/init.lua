@@ -4,5 +4,6 @@
 local M = {}
 
 M.writer = require("xlsx.xml.writer")
+M.parser = require("xlsx.xml.parser")
 
 return M
