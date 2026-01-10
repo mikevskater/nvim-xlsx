@@ -589,6 +589,11 @@ function Worksheet:add_hyperlink(row, col, target, options)
     link.location = target
   end
 
+  -- Store display text for the hyperlink element
+  if options.display_text then
+    link.display = options.display_text
+  end
+
   table.insert(self.hyperlinks, link)
 
   -- If display text is provided, set the cell value
@@ -931,6 +936,9 @@ function Worksheet:_generate_hyperlinks(hyperlink_rels)
       if link.tooltip then
         attrs.tooltip = link.tooltip
       end
+      if link.display then
+        attrs.display = link.display
+      end
       table.insert(hyperlink_rels, {
         id = rid,
         target = link.target,
@@ -940,9 +948,13 @@ function Worksheet:_generate_hyperlinks(hyperlink_rels)
       rel_id = rel_id + 1
     else
       -- Internal link uses location attribute
+      -- Excel internal links need the location without a leading # (Excel adds it)
       attrs.location = link.location
       if link.tooltip then
         attrs.tooltip = link.tooltip
+      end
+      if link.display then
+        attrs.display = link.display
       end
     end
 
