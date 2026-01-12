@@ -106,28 +106,27 @@
 ## Installation
 
 ### lazy.nvim <sub>(Recommended)</sub>
-#### Import method:
-##### lazy.lua
+#### IMPORT METHOD:
+##### --lazy.lua
 ```lua
   require("lazy").setup({
       {import = 'config.plugins.xlsx'},
     }
   )
 ```
-##### xlsx.lua
+##### --xlsx.lua
 ```lua
   return {
     "mikevskater/nvim-xlsx",
     opts = {},
     lazy = true,
   }
-} 
 ```
 
 ---
 
-#### Direct method:
-##### lazy.lua
+#### DIRECT METHOD:
+##### --lazy.lua
 ```lua
   require("lazy").setup({
       {"mikevskater/nvim-xlsx"},
