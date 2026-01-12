@@ -1,11 +1,11 @@
 --- Styles XML parsing for xlsx
---- @module xlsx.parts.styles_part
+--- @module nvim-xlsx.parts.styles_part
 ---
 --- Handles parsing of xl/styles.xml
 --- For reading files, we preserve the original styles and map them
 --- to our internal style format for modification.
 
-local parser = require("xlsx.xml.parser")
+local parser = require("nvim-xlsx.xml.parser")
 
 local M = {}
 

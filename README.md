@@ -146,7 +146,7 @@ add("mikevskater/nvim-xlsx")
 **Create a Spreadsheet**
 
 ```lua
-local xlsx = require("xlsx")
+local xlsx = require("nvim-xlsx")
 
 local wb = xlsx.new_workbook()
 local sheet = wb:add_sheet("Data")
@@ -165,7 +165,7 @@ wb:save("output.xlsx")
 **Export a Lua Table**
 
 ```lua
-local xlsx = require("xlsx")
+local xlsx = require("nvim-xlsx")
 
 local data = {
   {"Product", "Price", "Qty"},
@@ -182,7 +182,7 @@ xlsx.export_table(data, "products.xlsx")
 **Read an Existing File**
 
 ```lua
-local xlsx = require("xlsx")
+local xlsx = require("nvim-xlsx")
 
 local data = xlsx.import_table("input.xlsx")
 
@@ -202,7 +202,7 @@ end
 ### Main Module
 
 ```lua
-local xlsx = require("xlsx")
+local xlsx = require("nvim-xlsx")
 ```
 
 | Function | Description |
@@ -434,7 +434,7 @@ local range = xlsx.get_range(sheet, 1, 1, 10, 5)
 <summary><b>Date Utilities</b></summary>
 
 ```lua
-local xlsx = require("xlsx")
+local xlsx = require("nvim-xlsx")
 
 xlsx.date.to_serial({year=2024, month=1, day=15})  -- Lua date to Excel serial
 xlsx.date.from_serial(45306)                        -- Excel serial to Lua date
@@ -455,7 +455,7 @@ xlsx.date.to_unix_timestamp(45306)                  -- Excel to Unix
 <summary><b>Column Utilities</b></summary>
 
 ```lua
-local xlsx = require("xlsx")
+local xlsx = require("nvim-xlsx")
 
 xlsx.utils.to_letter(1)               -- "A"
 xlsx.utils.to_letter(27)              -- "AA"
@@ -475,7 +475,7 @@ xlsx.utils.make_range(1, 1, 10, 2)    -- "A1:B10"
 <summary><b>Color Utilities</b></summary>
 
 ```lua
-local color = require("xlsx.utils.color")
+local color = require("nvim-xlsx.utils.color")
 
 color.to_argb("#FF0000")              -- "FFFF0000"
 color.to_argb("red")                  -- "FFFF0000"
@@ -492,7 +492,7 @@ color.apply_tint("FFFF0000", -0.5)    -- darker
 <summary><b>Constants</b></summary>
 
 ```lua
-local xlsx = require("xlsx")
+local xlsx = require("nvim-xlsx")
 
 xlsx.LIMITS.MAX_ROWS           -- 1,048,576
 xlsx.LIMITS.MAX_COLS           -- 16,384

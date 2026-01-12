@@ -1,9 +1,9 @@
 --- Workbook XML parsing for xlsx
---- @module xlsx.parts.workbook_part
+--- @module nvim-xlsx.parts.workbook_part
 ---
 --- Handles parsing of xl/workbook.xml and xl/_rels/workbook.xml.rels
 
-local parser = require("xlsx.xml.parser")
+local parser = require("nvim-xlsx.xml.parser")
 
 local M = {}
 

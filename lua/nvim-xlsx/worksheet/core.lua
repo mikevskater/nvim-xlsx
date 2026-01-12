@@ -1,10 +1,10 @@
 --- Worksheet core module - base class and cell operations
---- @module xlsx.worksheet.core
+--- @module nvim-xlsx.worksheet.core
 
-local Cell = require("xlsx.cell")
-local column_utils = require("xlsx.utils.column")
-local date_utils = require("xlsx.utils.date")
-local validation = require("xlsx.utils.validation")
+local Cell = require("nvim-xlsx.cell")
+local column_utils = require("nvim-xlsx.utils.column")
+local date_utils = require("nvim-xlsx.utils.date")
+local validation = require("nvim-xlsx.utils.validation")
 
 local LIMITS = validation.LIMITS
 

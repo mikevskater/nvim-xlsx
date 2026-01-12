@@ -56,7 +56,7 @@ macOS:~
 
 Create a simple spreadsheet:
 >lua
-    local xlsx = require("xlsx")
+    local xlsx = require("nvim-xlsx")
 
     -- Create workbook with one sheet
     local wb = xlsx.new_workbook()
@@ -72,7 +72,7 @@ Create a simple spreadsheet:
 
 Export a Lua table:
 >lua
-    local xlsx = require("xlsx")
+    local xlsx = require("nvim-xlsx")
 
     -- Define data as 2D array
     local data = {
@@ -87,7 +87,7 @@ Export a Lua table:
 
 Read an existing file:
 >lua
-    local xlsx = require("xlsx")
+    local xlsx = require("nvim-xlsx")
 
     -- Import as 2D array
     local data = xlsx.import_table("input.xlsx")
@@ -863,7 +863,7 @@ Example:
 
 DATE UTILITIES ~
 >lua
-    local date = require("xlsx").date
+    local date = require("nvim-xlsx").date
 
     -- Convert Lua date table to Excel serial number
     date.to_serial({year=2024, month=1, day=15})
@@ -899,7 +899,7 @@ DATE UTILITIES ~
 
 COLUMN UTILITIES ~
 >lua
-    local utils = require("xlsx").utils
+    local utils = require("nvim-xlsx").utils
 
     -- Column number to letter
     utils.to_letter(1)     -- "A"
@@ -927,7 +927,7 @@ COLUMN UTILITIES ~
 
 COLOR UTILITIES ~
 >lua
-    local color = require("xlsx.utils.color")
+    local color = require("nvim-xlsx.utils.color")
 
     -- Convert to ARGB format
     color.to_argb("#FF0000")   -- "FFFF0000"
@@ -947,7 +947,7 @@ COLOR UTILITIES ~
 
 VALIDATION UTILITIES ~
 >lua
-    local validation = require("xlsx.utils.validation")
+    local validation = require("nvim-xlsx.utils.validation")
 
     -- Check limits
     validation.validate_row(1)
@@ -959,7 +959,7 @@ VALIDATION UTILITIES ~
 
 CONSTANTS ~
 >lua
-    local xlsx = require("xlsx")
+    local xlsx = require("nvim-xlsx")
 
     xlsx.LIMITS.MAX_ROWS       -- 1,048,576
     xlsx.LIMITS.MAX_COLS       -- 16,384

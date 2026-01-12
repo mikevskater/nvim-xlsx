@@ -1,12 +1,12 @@
 --- Workbook representation for xlsx
---- @module xlsx.workbook
+--- @module nvim-xlsx.workbook
 
-local Worksheet = require("xlsx.worksheet")
-local xml = require("xlsx.xml.writer")
-local templates = require("xlsx.xml.templates")
-local zip = require("xlsx.zip")
-local doc_props = require("xlsx.parts.doc_props")
-local Style = require("xlsx.style")
+local Worksheet = require("nvim-xlsx.worksheet")
+local xml = require("nvim-xlsx.xml.writer")
+local templates = require("nvim-xlsx.xml.templates")
+local zip = require("nvim-xlsx.zip")
+local doc_props = require("nvim-xlsx.parts.doc_props")
+local Style = require("nvim-xlsx.style")
 
 local M = {}
 

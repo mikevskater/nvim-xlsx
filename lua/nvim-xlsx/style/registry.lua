@@ -1,9 +1,9 @@
 --- Style registry for xlsx
 --- Manages fonts, fills, borders, number formats, and cell styles
---- @module xlsx.style.registry
+--- @module nvim-xlsx.style.registry
 
-local color_utils = require("xlsx.utils.color")
-local constants = require("xlsx.style.constants")
+local color_utils = require("nvim-xlsx.utils.color")
+local constants = require("nvim-xlsx.style.constants")
 
 local M = {}
 

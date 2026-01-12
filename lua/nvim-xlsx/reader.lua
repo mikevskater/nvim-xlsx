@@ -1,13 +1,13 @@
 --- XLSX file reader
---- @module xlsx.reader
+--- @module nvim-xlsx.reader
 ---
 --- Coordinates reading and parsing of xlsx files.
 
-local zip = require("xlsx.zip")
-local shared_strings_mod = require("xlsx.parts.shared_strings")
-local workbook_part = require("xlsx.parts.workbook_part")
-local worksheet_part = require("xlsx.parts.worksheet_part")
-local styles_part = require("xlsx.parts.styles_part")
+local zip = require("nvim-xlsx.zip")
+local shared_strings_mod = require("nvim-xlsx.parts.shared_strings")
+local workbook_part = require("nvim-xlsx.parts.workbook_part")
+local worksheet_part = require("nvim-xlsx.parts.worksheet_part")
+local styles_part = require("nvim-xlsx.parts.styles_part")
 
 local M = {}
 

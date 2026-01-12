@@ -1,8 +1,8 @@
 --- Cell representation for xlsx
---- @module xlsx.cell
+--- @module nvim-xlsx.cell
 
-local column_utils = require("xlsx.utils.column")
-local xml = require("xlsx.xml.writer")
+local column_utils = require("nvim-xlsx.utils.column")
+local xml = require("nvim-xlsx.xml.writer")
 
 local M = {}
 

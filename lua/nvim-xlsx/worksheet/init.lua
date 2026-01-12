@@ -1,5 +1,5 @@
 --- Worksheet module - combines core, features, and xml submodules
---- @module xlsx.worksheet
+--- @module nvim-xlsx.worksheet
 ---
 --- This module provides backward compatibility by exposing the same API
 --- as the original worksheet.lua while internally splitting the code
@@ -55,9 +55,9 @@
 ---   - set_cell(), set(), set_cell_value(), set_formula(), set_date(), set_boolean()
 ---
 
-local core = require("xlsx.worksheet.core")
-local features = require("xlsx.worksheet.features")
-local xml_gen = require("xlsx.worksheet.xml")
+local core = require("nvim-xlsx.worksheet.core")
+local features = require("nvim-xlsx.worksheet.features")
+local xml_gen = require("nvim-xlsx.worksheet.xml")
 
 local M = {}
 

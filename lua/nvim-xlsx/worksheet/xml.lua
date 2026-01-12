@@ -1,9 +1,9 @@
 --- Worksheet XML generation module
---- @module xlsx.worksheet.xml
+--- @module nvim-xlsx.worksheet.xml
 
-local column_utils = require("xlsx.utils.column")
-local xml = require("xlsx.xml.writer")
-local templates = require("xlsx.xml.templates")
+local column_utils = require("nvim-xlsx.utils.column")
+local xml = require("nvim-xlsx.xml.writer")
+local templates = require("nvim-xlsx.xml.templates")
 
 local M = {}
 

@@ -1,9 +1,9 @@
 --- Document properties generation for xlsx
 --- Generates docProps/core.xml and docProps/app.xml
---- @module xlsx.parts.doc_props
+--- @module nvim-xlsx.parts.doc_props
 
-local xml = require("xlsx.xml.writer")
-local templates = require("xlsx.xml.templates")
+local xml = require("nvim-xlsx.xml.writer")
+local templates = require("nvim-xlsx.xml.templates")
 
 local M = {}
 

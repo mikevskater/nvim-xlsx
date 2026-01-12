@@ -1,7 +1,7 @@
 --- Column utilities for Excel column/cell reference handling
---- @module xlsx.utils.column
+--- @module nvim-xlsx.utils.column
 
-local validation = require("xlsx.utils.validation")
+local validation = require("nvim-xlsx.utils.validation")
 local LIMITS = validation.LIMITS
 
 local M = {}

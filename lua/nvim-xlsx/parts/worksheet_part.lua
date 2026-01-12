@@ -1,10 +1,10 @@
 --- Worksheet XML parsing for xlsx
---- @module xlsx.parts.worksheet_part
+--- @module nvim-xlsx.parts.worksheet_part
 ---
 --- Handles parsing of xl/worksheets/sheetN.xml
 
-local parser = require("xlsx.xml.parser")
-local column_utils = require("xlsx.utils.column")
+local parser = require("nvim-xlsx.xml.parser")
+local column_utils = require("nvim-xlsx.utils.column")
 
 local M = {}
 

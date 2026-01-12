@@ -1,8 +1,8 @@
 --- Worksheet features module - freeze panes, filters, validation, hyperlinks, print settings
---- @module xlsx.worksheet.features
+--- @module nvim-xlsx.worksheet.features
 
-local column_utils = require("xlsx.utils.column")
-local validation = require("xlsx.utils.validation")
+local column_utils = require("nvim-xlsx.utils.column")
+local validation = require("nvim-xlsx.utils.validation")
 
 local LIMITS = validation.LIMITS
 

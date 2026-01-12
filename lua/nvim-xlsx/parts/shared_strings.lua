@@ -1,12 +1,12 @@
 --- Shared Strings parsing and generation for xlsx
---- @module xlsx.parts.shared_strings
+--- @module nvim-xlsx.parts.shared_strings
 ---
 --- Handles xl/sharedStrings.xml which contains deduplicated string values
 --- referenced by index from cells.
 
-local parser = require("xlsx.xml.parser")
-local xml_writer = require("xlsx.xml.writer")
-local templates = require("xlsx.xml.templates")
+local parser = require("nvim-xlsx.xml.parser")
+local xml_writer = require("nvim-xlsx.xml.writer")
+local templates = require("nvim-xlsx.xml.templates")
 
 local M = {}
 

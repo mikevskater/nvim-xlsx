@@ -69,7 +69,7 @@ end
 --- Get the xlsx module
 --- @return table xlsx module
 function M.require_xlsx()
-  return require("xlsx")
+  return require("nvim-xlsx")
 end
 
 return M

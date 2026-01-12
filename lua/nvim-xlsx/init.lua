@@ -1,12 +1,12 @@
 --- nvim-xlsx: Pure Lua xlsx library for Neovim
---- @module xlsx
+--- @module nvim-xlsx
 
-local Workbook = require("xlsx.workbook")
-local reader = require("xlsx.reader")
+local Workbook = require("nvim-xlsx.workbook")
+local reader = require("nvim-xlsx.reader")
 
 local M = {}
 
-M._VERSION = "0.6.0"
+M._VERSION = "0.7.0"
 
 --- Create a new empty workbook
 --- @return Workbook
@@ -279,12 +279,12 @@ end
 
 --- Export submodules for advanced usage
 M.Workbook = Workbook.Workbook
-M.Worksheet = require("xlsx.worksheet").Worksheet
-M.Cell = require("xlsx.cell").Cell
-M.Style = require("xlsx.style")
-M.xml = require("xlsx.xml")
-M.utils = require("xlsx.utils")
-M.zip = require("xlsx.zip")
+M.Worksheet = require("nvim-xlsx.worksheet").Worksheet
+M.Cell = require("nvim-xlsx.cell").Cell
+M.Style = require("nvim-xlsx.style")
+M.xml = require("nvim-xlsx.xml")
+M.utils = require("nvim-xlsx.utils")
+M.zip = require("nvim-xlsx.zip")
 M.reader = reader
 
 -- Style constants for convenience
@@ -295,10 +295,10 @@ M.UNDERLINE = M.Style.UNDERLINE
 M.BUILTIN_FORMATS = M.Style.BUILTIN_FORMATS
 
 -- Date utilities for convenience
-M.date = require("xlsx.utils.date")
+M.date = require("nvim-xlsx.utils.date")
 
 -- Validation utilities for convenience
-M.validation = require("xlsx.utils.validation")
+M.validation = require("nvim-xlsx.utils.validation")
 
 -- Excel limits for reference
 M.LIMITS = M.validation.LIMITS

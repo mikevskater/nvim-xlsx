@@ -1,8 +1,8 @@
 --- Style XML generation for xlsx
 --- Generates styles.xml content
---- @module xlsx.style.xml
+--- @module nvim-xlsx.style.xml
 
-local xml = require("xlsx.xml.writer")
+local xml = require("nvim-xlsx.xml.writer")
 
 local M = {}
 

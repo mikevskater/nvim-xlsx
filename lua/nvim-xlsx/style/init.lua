@@ -1,13 +1,13 @@
 --- Style module - combines constants, registry, and xml submodules
---- @module xlsx.style
+--- @module nvim-xlsx.style
 ---
 --- This module provides backward compatibility by exposing the same API
 --- as the original style.lua while internally splitting the code
 --- into smaller, focused modules.
 
-local constants = require("xlsx.style.constants")
-local registry = require("xlsx.style.registry")
-local xml_gen = require("xlsx.style.xml")
+local constants = require("nvim-xlsx.style.constants")
+local registry = require("nvim-xlsx.style.registry")
+local xml_gen = require("nvim-xlsx.style.xml")
 
 local M = {}
 

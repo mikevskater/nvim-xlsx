@@ -11,7 +11,7 @@ if not base_dir then
 end
 package.path = base_dir .. "/lua/?.lua;" .. base_dir .. "/lua/?/init.lua;" .. package.path
 
-local xlsx = require("xlsx")
+local xlsx = require("nvim-xlsx")
 
 print("=== nvim-xlsx Performance Benchmark ===\n")
 
