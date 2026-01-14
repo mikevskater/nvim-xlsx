@@ -4,6 +4,7 @@
 
 local color_utils = require("nvim-xlsx.utils.color")
 local constants = require("nvim-xlsx.style.constants")
+local style_validation = require("nvim-xlsx.style.validation")
 
 local M = {}
 
@@ -224,9 +225,19 @@ end
 
 --- Create a style and return its index
 --- @param def table Style definition
---- @return integer Style index (xf index)
-function StyleRegistry:create_style(def)
+--- @param skip_validation? boolean Skip validation (internal use)
+--- @return integer? index Style index (xf index), or nil on error
+--- @return string? error Error message if validation failed
+function StyleRegistry:create_style(def, skip_validation)
   def = def or {}
+
+  -- Validate unless explicitly skipped
+  if not skip_validation then
+    local valid, errors = style_validation.validate_style(def)
+    if not valid then
+      return nil, table.concat(errors, "; ")
+    end
+  end
 
   -- Build font if any font properties specified
   local fontId = 0
@@ -307,7 +318,7 @@ function StyleRegistry:create_style(def)
   -- Check for existing
   local key = self:_xf_key(xf)
   if self.xf_map[key] then
-    return self.xf_map[key]
+    return self.xf_map[key], nil
   end
 
   -- Register new
@@ -315,7 +326,7 @@ function StyleRegistry:create_style(def)
   table.insert(self.cellXfs, xf)
   self.xf_map[key] = idx
 
-  return idx
+  return idx, nil
 end
 
 -- Export

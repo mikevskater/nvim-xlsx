@@ -294,6 +294,9 @@ M.VALIGN = M.Style.VALIGN
 M.UNDERLINE = M.Style.UNDERLINE
 M.BUILTIN_FORMATS = M.Style.BUILTIN_FORMATS
 
+-- Style validation for external config checking
+M.validate_style = M.Style.validate_style
+
 -- Date utilities for convenience
 M.date = require("nvim-xlsx.utils.date")
 

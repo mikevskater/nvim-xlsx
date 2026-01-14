@@ -8,6 +8,7 @@
 local constants = require("nvim-xlsx.style.constants")
 local registry = require("nvim-xlsx.style.registry")
 local xml_gen = require("nvim-xlsx.style.xml")
+local validation = require("nvim-xlsx.style.validation")
 
 local M = {}
 
@@ -56,5 +57,15 @@ M.UNDERLINE = constants.UNDERLINE
 -- Export constructor and class
 M.new_registry = registry.new_registry
 M.StyleRegistry = StyleRegistry
+
+-- Export validation functions
+M.validate_style = validation.validate_style
+M.get_valid_halign = validation.get_valid_halign
+M.get_valid_valign = validation.get_valid_valign
+M.get_valid_border_styles = validation.get_valid_border_styles
+M.get_valid_underline = validation.get_valid_underline
+M.get_valid_patterns = validation.get_valid_patterns
+M.get_valid_number_formats = validation.get_valid_number_formats
+M.get_valid_colors = validation.get_valid_colors
 
 return M
