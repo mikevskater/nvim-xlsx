@@ -17,7 +17,7 @@ end
 --- Convenience function to export a 2D table to xlsx
 --- @param data table[] Array of rows, each row is an array of values
 --- @param filepath string Output file path
---- @param options? table Options: { sheet_name?: string, headers?: string[] }
+--- @param options? table Options: { sheet_name?: string, headers?: string[], auto_fit?: boolean|table }
 --- @return boolean success
 --- @return string? error_message
 function M.export_table(data, filepath, options)
@@ -36,6 +36,7 @@ function M.export_table(data, filepath, options)
     for col, header in ipairs(options.headers) do
       sheet:set_cell(1, col, header)
     end
+    sheet:set_header_row(1)
     start_row = 2
   end
 
@@ -44,6 +45,12 @@ function M.export_table(data, filepath, options)
     for col_idx, value in ipairs(row_data) do
       sheet:set_cell(start_row + row_idx - 1, col_idx, value)
     end
+  end
+
+  -- Auto-fit column widths if requested
+  if options.auto_fit then
+    local fit_opts = type(options.auto_fit) == "table" and options.auto_fit or {}
+    sheet:auto_fit_columns(fit_opts)
   end
 
   return wb:save(filepath)

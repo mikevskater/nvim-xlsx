@@ -50,9 +50,14 @@
 ---   - add_hyperlink()
 ---   - set_print_settings(), set_margins(), set_orientation()
 ---   - set_print_area(), set_print_title_rows(), set_print_title_cols()
+---   - auto_fit_columns()
+---   - set_header_row()
 ---
 --- Cell methods (return Cell):
 ---   - set_cell(), set(), set_cell_value(), set_formula(), set_date(), set_boolean()
+---
+--- Lookup methods (return nil if not found):
+---   - get_column_index(name) -> integer?
 ---
 
 local core = require("nvim-xlsx.worksheet.core")
@@ -135,6 +140,11 @@ end
 
 function Worksheet:set_print_title_cols(cols)
   return features.set_print_title_cols(self, cols)
+end
+
+-- Auto-fit columns
+function Worksheet:auto_fit_columns(opts)
+  return features.auto_fit_columns(self, opts)
 end
 
 -- ============================================

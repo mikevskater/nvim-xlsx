@@ -70,6 +70,8 @@ local M = {}
 ---@field data_validations WorksheetDataValidation[] List of data validations
 ---@field hyperlinks WorksheetHyperlink[] List of hyperlinks
 ---@field print_settings? WorksheetPrintSettings Print settings
+---@field header_row? integer Row number designated as the header row
+---@field column_names? table<string, integer> Mapping of header name -> column index
 local Worksheet = {}
 Worksheet.__index = Worksheet
 
@@ -102,6 +104,8 @@ function M.new(name, index, workbook)
   self.data_validations = {}
   self.hyperlinks = {}
   self.print_settings = nil
+  self.header_row = nil
+  self.column_names = nil
 
   return self
 end
@@ -182,6 +186,32 @@ end
 --- @param width number Width in characters
 function Worksheet:set_column_width(col, width)
   self.column_widths[col] = width
+end
+
+--- Designate a row as the header row, building a name-to-column-index mapping
+--- @param row_number integer The row number containing headers (1-indexed)
+--- @return Worksheet self For chaining
+function Worksheet:set_header_row(row_number)
+  validation.check(validation.validate_row(row_number))
+  self.header_row = row_number
+  self.column_names = {}
+  local row_data = self.rows[row_number]
+  if row_data then
+    for col, cell in pairs(row_data) do
+      if cell and cell.value ~= nil and type(cell.value) == "string" and cell.value ~= "" then
+        self.column_names[cell.value] = col
+      end
+    end
+  end
+  return self
+end
+
+--- Look up a column index by header name
+--- @param name string The column header name
+--- @return integer? col_index Column index, or nil if not found
+function Worksheet:get_column_index(name)
+  if not self.column_names then return nil end
+  return self.column_names[name]
 end
 
 --- Set row height

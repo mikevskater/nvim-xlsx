@@ -331,4 +331,71 @@ function M.set_print_title_cols(self, cols)
   return self
 end
 
+-- ============================================
+-- Auto-fit Column Widths
+-- ============================================
+
+--- Auto-fit column widths based on cell content
+--- Measures the display width of all cell values and sets column widths accordingly.
+--- @param self Worksheet
+--- @param opts? table Options: { min_width?: integer, max_width?: integer, padding?: integer, columns?: (integer|string)[] }
+--- @return Worksheet self For chaining
+function M.auto_fit_columns(self, opts)
+  opts = opts or {}
+  local min_width = opts.min_width or 8
+  local max_width = opts.max_width or 50
+  local padding = opts.padding or 2
+
+  if not self.min_col or not self.max_col then
+    return self
+  end
+
+  -- Build set of target columns (resolve string names via header row mapping)
+  local target_cols
+  if opts.columns then
+    target_cols = {}
+    for _, col in ipairs(opts.columns) do
+      if type(col) == "string" then
+        local resolved = self.column_names and self.column_names[col]
+        if resolved then
+          target_cols[resolved] = true
+        end
+      else
+        target_cols[col] = true
+      end
+    end
+  end
+
+  -- Measure max content width per column
+  local col_widths = {}
+  if target_cols then
+    for col in pairs(target_cols) do
+      col_widths[col] = 0
+    end
+  else
+    for col = self.min_col, self.max_col do
+      col_widths[col] = 0
+    end
+  end
+
+  for _, row_data in pairs(self.rows) do
+    for col, cell in pairs(row_data) do
+      if col_widths[col] ~= nil and cell and cell.value ~= nil then
+        local len = #tostring(cell.value)
+        if len > col_widths[col] then
+          col_widths[col] = len
+        end
+      end
+    end
+  end
+
+  -- Apply constraints and store
+  for col, width in pairs(col_widths) do
+    width = math.max(min_width, math.min(max_width, width + padding))
+    self.column_widths[col] = width
+  end
+
+  return self
+end
+
 return M
