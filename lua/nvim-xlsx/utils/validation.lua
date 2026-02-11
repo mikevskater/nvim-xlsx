@@ -235,6 +235,61 @@ function M.validate_row_height(height)
   return { valid = true }
 end
 
+--- Validate an Excel table name
+--- @param name any Value to validate
+--- @return ValidationResult
+function M.validate_table_name(name)
+  if type(name) ~= "string" then
+    return { valid = false, error = "Table name must be a string, got " .. type(name) }
+  end
+  if name == "" then
+    return { valid = false, error = "Table name cannot be empty" }
+  end
+  if #name > 255 then
+    return { valid = false, error = string.format("Table name '%s' exceeds 255 character limit", name) }
+  end
+  -- Must start with letter, underscore, or backslash
+  if not name:match("^[A-Za-z_\\]") then
+    return { valid = false, error = "Table name must start with a letter, underscore, or backslash" }
+  end
+  -- Cannot contain spaces
+  if name:find(" ") then
+    return { valid = false, error = "Table name cannot contain spaces" }
+  end
+  -- Cannot look like a cell reference (e.g., A1, XFD1048576)
+  if name:match("^[A-Za-z]+%d+$") then
+    local letters = name:match("^([A-Za-z]+)")
+    if #letters <= 3 then
+      return { valid = false, error = "Table name cannot look like a cell reference: " .. name }
+    end
+  end
+  return { valid = true }
+end
+
+--- Validate a defined name (named range name)
+--- @param name any Value to validate
+--- @return ValidationResult
+function M.validate_defined_name(name)
+  if type(name) ~= "string" then
+    return { valid = false, error = "Defined name must be a string, got " .. type(name) }
+  end
+  if name == "" then
+    return { valid = false, error = "Defined name cannot be empty" }
+  end
+  if #name > 255 then
+    return { valid = false, error = string.format("Defined name '%s' exceeds 255 character limit", name) }
+  end
+  -- Must start with letter, underscore, or backslash
+  if not name:match("^[A-Za-z_\\]") then
+    return { valid = false, error = "Defined name must start with a letter, underscore, or backslash" }
+  end
+  -- Cannot contain spaces
+  if name:find(" ") then
+    return { valid = false, error = "Defined name cannot contain spaces" }
+  end
+  return { valid = true }
+end
+
 --- Helper to check validation and raise error if invalid
 --- @param result ValidationResult
 --- @param context? string Optional context for error message

@@ -398,4 +398,77 @@ function M.auto_fit_columns(self, opts)
   return self
 end
 
+-- ============================================
+-- Excel Tables
+-- ============================================
+
+--- Add an Excel table (structured ListObject) to the worksheet
+--- @param self Worksheet
+--- @param r1 integer Start row (header row)
+--- @param c1 integer Start column
+--- @param r2 integer End row (must be > r1 for at least one data row)
+--- @param c2 integer End column
+--- @param options? table Optional: { name?: string, auto_filter?: boolean, style_name?: string, show_first_col?: boolean, show_last_col?: boolean, show_row_stripes?: boolean, show_col_stripes?: boolean }
+--- @return Worksheet self For chaining
+function M.add_table(self, r1, c1, r2, c2, options)
+  options = options or {}
+
+  -- Validate bounds
+  validation.check(validation.validate_range(r1, c1, r2, c2))
+
+  -- Normalize coordinates
+  if r1 > r2 then r1, r2 = r2, r1 end
+  if c1 > c2 then c1, c2 = c2, c1 end
+
+  -- Must have at least a header row and one data row
+  if r1 == r2 then
+    error("Table must have at least a header row and one data row (r1 == r2)")
+  end
+
+  -- Get globally unique table ID
+  local id = self.workbook:_next_table_id()
+
+  -- Determine table name
+  local name = options.name or ("Table" .. id)
+  validation.check(validation.validate_table_name(name), "add_table")
+
+  -- Derive column names from header row cells
+  local columns = {}
+  for col = c1, c2 do
+    local col_id = col - c1 + 1
+    local col_name
+    local cell = self:get_cell(r1, col)
+    if cell and cell.value ~= nil and tostring(cell.value) ~= "" then
+      col_name = tostring(cell.value)
+    else
+      col_name = "Column" .. col_id
+    end
+    table.insert(columns, { id = col_id, name = col_name })
+  end
+
+  -- Build the ExcelTable struct
+  local ref = column_utils.make_range(r1, c1, r2, c2)
+  ---@type ExcelTable
+  local tbl = {
+    id = id,
+    name = name,
+    ref = ref,
+    header_row = true,
+    r1 = r1,
+    c1 = c1,
+    r2 = r2,
+    c2 = c2,
+    columns = columns,
+    auto_filter = options.auto_filter ~= false, -- default true
+    style_name = options.style_name or "TableStyleMedium2",
+    show_first_col = options.show_first_col or false,
+    show_last_col = options.show_last_col or false,
+    show_row_stripes = options.show_row_stripes ~= false, -- default true
+    show_col_stripes = options.show_col_stripes or false,
+  }
+
+  table.insert(self.tables, tbl)
+  return self
+end
+
 return M

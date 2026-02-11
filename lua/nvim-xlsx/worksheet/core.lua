@@ -40,6 +40,23 @@ local M = {}
 ---@field tooltip? string Tooltip text
 ---@field is_external boolean Whether it's an external link
 
+---@class ExcelTable
+---@field id integer Globally unique table ID
+---@field name string Table name (e.g., "SalesData")
+---@field ref string Range reference (e.g., "A1:C4")
+---@field header_row boolean Whether the table has a header row
+---@field r1 integer Start row
+---@field c1 integer Start column
+---@field r2 integer End row
+---@field c2 integer End column
+---@field columns {id: integer, name: string}[] Column definitions
+---@field auto_filter boolean Whether auto-filter is enabled
+---@field style_name string Table style name (e.g., "TableStyleMedium2")
+---@field show_first_col boolean Highlight first column
+---@field show_last_col boolean Highlight last column
+---@field show_row_stripes boolean Show alternating row shading
+---@field show_col_stripes boolean Show alternating column shading
+
 ---@class WorksheetPrintSettings
 ---@field orientation? string "portrait" or "landscape"
 ---@field paperSize? integer Paper size code (1=Letter, 9=A4)
@@ -70,6 +87,7 @@ local M = {}
 ---@field data_validations WorksheetDataValidation[] List of data validations
 ---@field hyperlinks WorksheetHyperlink[] List of hyperlinks
 ---@field print_settings? WorksheetPrintSettings Print settings
+---@field tables ExcelTable[] List of Excel tables on this sheet
 ---@field header_row? integer Row number designated as the header row
 ---@field column_names? table<string, integer> Mapping of header name -> column index
 local Worksheet = {}
@@ -103,6 +121,7 @@ function M.new(name, index, workbook)
   self.auto_filter = nil
   self.data_validations = {}
   self.hyperlinks = {}
+  self.tables = {}
   self.print_settings = nil
   self.header_row = nil
   self.column_names = nil

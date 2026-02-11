@@ -52,6 +52,7 @@
 ---   - set_print_area(), set_print_title_rows(), set_print_title_cols()
 ---   - auto_fit_columns()
 ---   - set_header_row()
+---   - add_table()
 ---
 --- Cell methods (return Cell):
 ---   - set_cell(), set(), set_cell_value(), set_formula(), set_date(), set_boolean()
@@ -147,6 +148,11 @@ function Worksheet:auto_fit_columns(opts)
   return features.auto_fit_columns(self, opts)
 end
 
+-- Excel tables
+function Worksheet:add_table(r1, c1, r2, c2, options)
+  return features.add_table(self, r1, c1, r2, c2, options)
+end
+
 -- ============================================
 -- Inject XML generation methods into Worksheet class
 -- ============================================
@@ -181,6 +187,14 @@ end
 
 function Worksheet:get_hyperlink_relationships()
   return xml_gen.get_hyperlink_relationships(self)
+end
+
+function Worksheet:get_table_relationships()
+  return xml_gen.get_table_relationships(self)
+end
+
+function Worksheet:_generate_table_parts(table_rels)
+  return xml_gen._generate_table_parts(self, table_rels)
 end
 
 function Worksheet:to_xml(is_active)

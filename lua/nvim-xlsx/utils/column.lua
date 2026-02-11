@@ -140,4 +140,14 @@ function M.make_range(r1, c1, r2, c2)
   return M.make_ref(r1, c1) .. ":" .. M.make_ref(r2, c2)
 end
 
+--- Create an absolute range reference (e.g., "$A$1:$C$10")
+--- @param r1 integer Start row
+--- @param c1 integer Start column
+--- @param r2 integer End row
+--- @param c2 integer End column
+--- @return string Absolute range reference
+function M.make_abs_range(r1, c1, r2, c2)
+  return M.make_ref(r1, c1, true, true) .. ":" .. M.make_ref(r2, c2, true, true)
+end
+
 return M

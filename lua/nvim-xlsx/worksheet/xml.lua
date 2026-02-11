@@ -347,6 +347,38 @@ function M._generate_print_settings(self)
   return table.concat(parts)
 end
 
+--- Generate table parts XML and populate relationship info
+--- @param self Worksheet
+--- @param table_rels table Table to populate with relationship info
+--- @return string
+function M._generate_table_parts(self, table_rels)
+  if #self.tables == 0 then
+    return ""
+  end
+
+  local parts = {}
+  for i, tbl in ipairs(self.tables) do
+    local rid = "rId" .. i
+    table.insert(parts, xml.empty_element("tablePart", { ["r:id"] = rid }))
+    table.insert(table_rels, {
+      id = rid,
+      target = "../tables/table" .. tbl.id .. ".xml",
+      type = templates.NS.REL_TABLE,
+    })
+  end
+
+  return xml.element_raw("tableParts", table.concat(parts), { count = #self.tables })
+end
+
+--- Get table relationships for this worksheet
+--- @param self Worksheet
+--- @return table[] Array of relationship info for tables
+function M.get_table_relationships(self)
+  local rels = {}
+  M._generate_table_parts(self, rels)
+  return rels
+end
+
 --- Get hyperlink relationships for this worksheet
 --- @param self Worksheet
 --- @return table[] Array of relationship info for external hyperlinks
@@ -420,6 +452,13 @@ function M.to_xml(self, is_active)
   local print_settings = M._generate_print_settings(self)
   if print_settings ~= "" then
     b:raw(print_settings)
+  end
+
+  -- Table parts (must come last per ECMA-376)
+  local table_rels = {}
+  local table_parts = M._generate_table_parts(self, table_rels)
+  if table_parts ~= "" then
+    b:raw(table_parts)
   end
 
   b:close("worksheet")

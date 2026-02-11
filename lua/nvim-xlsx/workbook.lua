@@ -7,6 +7,8 @@ local templates = require("nvim-xlsx.xml.templates")
 local zip = require("nvim-xlsx.zip")
 local doc_props = require("nvim-xlsx.parts.doc_props")
 local Style = require("nvim-xlsx.style")
+local column_utils = require("nvim-xlsx.utils.column")
+local validation = require("nvim-xlsx.utils.validation")
 
 local M = {}
 
@@ -16,6 +18,8 @@ local M = {}
 ---@field properties table Document properties
 ---@field active_sheet integer Index of active sheet
 ---@field styles StyleRegistry Style registry for this workbook
+---@field _table_id_counter integer Global table ID counter
+---@field defined_names table[] List of defined names (named ranges)
 local Workbook = {}
 Workbook.__index = Workbook
 
@@ -32,6 +36,8 @@ function M.new()
   }
   self.active_sheet = 1
   self.styles = Style.new_registry()
+  self._table_id_counter = 0
+  self.defined_names = {}
   return self
 end
 
@@ -116,6 +122,96 @@ function Workbook:create_style(def)
   return self.styles:create_style(def)
 end
 
+--- Get the next globally unique table ID
+--- @return integer
+function Workbook:_next_table_id()
+  self._table_id_counter = self._table_id_counter + 1
+  return self._table_id_counter
+end
+
+--- Add a raw defined name to the workbook
+--- @param name string The defined name
+--- @param ref string The reference string (pre-formatted, e.g., "Sales!$A$1:$C$4" or "42")
+--- @param options? table Optional: { local_sheet_id?: integer, hidden?: boolean, comment?: string }
+--- @return Workbook self For chaining
+function Workbook:add_defined_name(name, ref, options)
+  options = options or {}
+  validation.check(validation.validate_defined_name(name), "add_defined_name")
+  table.insert(self.defined_names, {
+    name = name,
+    ref = ref,
+    local_sheet_id = options.local_sheet_id,
+    hidden = options.hidden or false,
+    comment = options.comment,
+  })
+  return self
+end
+
+--- Add a named range (convenience method that builds the ref string)
+--- @param name string The range name
+--- @param sheet_name string The sheet name
+--- @param r1 integer Start row
+--- @param c1 integer Start column
+--- @param r2 integer End row
+--- @param c2 integer End column
+--- @param options? table Optional: { local_sheet_id?: integer, hidden?: boolean, comment?: string }
+--- @return Workbook self For chaining
+function Workbook:add_named_range(name, sheet_name, r1, c1, r2, c2, options)
+  -- Quote sheet name if it contains spaces
+  local quoted_name
+  if sheet_name:find(" ") then
+    quoted_name = "'" .. sheet_name .. "'"
+  else
+    quoted_name = sheet_name
+  end
+  local abs_range = column_utils.make_abs_range(r1, c1, r2, c2)
+  local ref = quoted_name .. "!" .. abs_range
+  return self:add_defined_name(name, ref, options)
+end
+
+--- Generate table XML for a single ExcelTable
+--- @param tbl ExcelTable
+--- @return string
+function Workbook:_generate_table_xml(tbl)
+  local b = xml.builder()
+  b:declaration()
+  b:open("table", {
+    xmlns = templates.NS.SPREADSHEET,
+    id = tbl.id,
+    name = tbl.name,
+    displayName = tbl.name,
+    ref = tbl.ref,
+    totalsRowShown = "0",
+  })
+
+  -- Auto-filter
+  if tbl.auto_filter then
+    b:empty("autoFilter", { ref = tbl.ref })
+  end
+
+  -- Table columns
+  local col_parts = {}
+  for _, col in ipairs(tbl.columns) do
+    table.insert(col_parts, xml.empty_element("tableColumn", {
+      id = col.id,
+      name = col.name,
+    }))
+  end
+  b:elem_raw("tableColumns", table.concat(col_parts), { count = #tbl.columns })
+
+  -- Table style info
+  b:empty("tableStyleInfo", {
+    name = tbl.style_name,
+    showFirstColumn = tbl.show_first_col and "1" or "0",
+    showLastColumn = tbl.show_last_col and "1" or "0",
+    showRowStripes = tbl.show_row_stripes and "1" or "0",
+    showColumnStripes = tbl.show_col_stripes and "1" or "0",
+  })
+
+  b:close("table")
+  return b:to_string()
+end
+
 --- Generate [Content_Types].xml
 --- @return string
 function Workbook:_generate_content_types()
@@ -149,6 +245,16 @@ function Workbook:_generate_content_types()
       PartName = "/xl/worksheets/sheet" .. i .. ".xml",
       ContentType = templates.CONTENT_TYPES.WORKSHEET,
     })
+  end
+
+  -- Override for each table
+  for _, sheet in ipairs(self.sheets) do
+    for _, tbl in ipairs(sheet.tables) do
+      b:empty("Override", {
+        PartName = "/xl/tables/table" .. tbl.id .. ".xml",
+        ContentType = templates.CONTENT_TYPES.TABLE,
+      })
+    end
   end
 
   -- Override for styles
@@ -245,6 +351,25 @@ function Workbook:_generate_workbook_xml()
   end
   b:close("sheets")
 
+  -- Defined names (named ranges)
+  if #self.defined_names > 0 then
+    b:open("definedNames")
+    for _, dn in ipairs(self.defined_names) do
+      local attrs = { name = dn.name }
+      if dn.local_sheet_id then
+        attrs.localSheetId = dn.local_sheet_id
+      end
+      if dn.hidden then
+        attrs.hidden = "1"
+      end
+      if dn.comment then
+        attrs.comment = dn.comment
+      end
+      b:elem("definedName", dn.ref, attrs)
+    end
+    b:close("definedNames")
+  end
+
   b:close("workbook")
   return b:to_string()
 end
@@ -259,8 +384,9 @@ end
 --- @param sheet Worksheet The worksheet
 --- @return string? XML content, or nil if no relationships needed
 function Workbook:_generate_worksheet_rels(sheet)
-  local rels = sheet:get_hyperlink_relationships()
-  if #rels == 0 then
+  local table_rels = sheet:get_table_relationships()
+  local hyperlink_rels = sheet:get_hyperlink_relationships()
+  if #table_rels == 0 and #hyperlink_rels == 0 then
     return nil
   end
 
@@ -268,7 +394,17 @@ function Workbook:_generate_worksheet_rels(sheet)
   b:declaration()
   b:open("Relationships", { xmlns = templates.NS.PACKAGE_RELS })
 
-  for _, rel in ipairs(rels) do
+  -- Table relationships first (rId1, rId2, ...)
+  for _, rel in ipairs(table_rels) do
+    b:empty("Relationship", {
+      Id = rel.id,
+      Type = rel.type,
+      Target = rel.target,
+    })
+  end
+
+  -- Hyperlink relationships (rId1001+, no collision)
+  for _, rel in ipairs(hyperlink_rels) do
     b:empty("Relationship", {
       Id = rel.id,
       Type = rel.type,
@@ -364,12 +500,21 @@ function Workbook:save(filepath)
     )
     if not ok then return cleanup_and_fail(err) end
 
-    -- Write worksheet relationships if needed (for external hyperlinks)
+    -- Write worksheet relationships if needed (for tables and external hyperlinks)
     local sheet_rels = self:_generate_worksheet_rels(sheet)
     if sheet_rels then
       ok, err = zip.write_file(
         temp_dir .. "/xl/worksheets/_rels/sheet" .. i .. ".xml.rels",
         sheet_rels
+      )
+      if not ok then return cleanup_and_fail(err) end
+    end
+
+    -- Write table XML files
+    for _, tbl in ipairs(sheet.tables) do
+      ok, err = zip.write_file(
+        temp_dir .. "/xl/tables/table" .. tbl.id .. ".xml",
+        self:_generate_table_xml(tbl)
       )
       if not ok then return cleanup_and_fail(err) end
     end

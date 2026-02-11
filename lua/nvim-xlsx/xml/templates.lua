@@ -32,6 +32,7 @@ M.NS = {
   -- Relationship types for properties
   REL_CORE_PROPS = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties",
   REL_EXT_PROPS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties",
+  REL_TABLE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/table",
 }
 
 -- Content types for xlsx parts
@@ -44,6 +45,7 @@ M.CONTENT_TYPES = {
   CORE_PROPS = "application/vnd.openxmlformats-package.core-properties+xml",
   EXT_PROPS = "application/vnd.openxmlformats-officedocument.extended-properties+xml",
   RELS = "application/vnd.openxmlformats-package.relationships+xml",
+  TABLE = "application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml",
 }
 
 -- Default extension mappings
